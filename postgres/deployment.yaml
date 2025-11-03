@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: aria-config
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata:
+      labels: { app: postgres }
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/postgres: runtime/default
+  spec:
+    securityContext:
+      seccompProfile: { type: RuntimeDefault }
+      fsGroup: 999
+      fsGroupChangePolicy: OnRootMismatch
+    containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+          - name: POSTGRES_DB
+            valueFrom: { secretKeyRef: { name: ssc-db, key: name } }
+          - name: POSTGRES_USER
+            valueFrom: { secretKeyRef: { name: ssc-db, key: user } }
+          - name: POSTGRES_PASSWORD
+            valueFrom: { secretKeyRef: { name: ssc-db, key: password } }
+        ports: [{ containerPort: 5432 }]
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: { drop: ["ALL"] }
+        volumeMounts:
+          - name: data
+            mountPath: /var/lib/postgresql/data
+          - name: run
+            mountPath: /var/run/postgresql
+    volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+      - name: run
+        emptyDir: {}

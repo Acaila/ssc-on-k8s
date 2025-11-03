@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raas
+  namespace: aria-config
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: raas } }
+  template:
+    metadata:
+      labels: { app: raas }
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/raas: runtime/default
+    spec:
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+        fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: raas
+          image: registry.local/ssc/raas:9.x
+          ports:
+            - containerPort: 4507
+          env:
+            - name: RAAS_DB_HOST
+              valueFrom: { secretKeyRef: { name: ssc-db, key: host } }
+            - name: RAAS_DB_NAME
+              valueFrom: { secretKeyRef: { name: ssc-db, key: name } }
+            - name: RAAS_DB_USER
+              valueFrom: { secretKeyRef: { name: ssc-db, key: user } }
+            - name: RAAS_DB_PASS
+              valueFrom: { secretKeyRef: { name: ssc-db, key: password } }
+            - name: RAAS_REDIS_HOST
+              valueFrom: { secretKeyRef: { name: ssc-redis, key: host } }
+            - name: RAAS_REDIS_PORT
+              valueFrom: { secretKeyRef: { name: ssc-redis, key: port } }
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - name: etc-raas
+              mountPath: /etc/raas
+            - name: log-raas
+              mountPath: /var/log/raas
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            tcpSocket: { port: 4507 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 4507 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+        volumes:
+          - name: etc-raas
+            persistentVolumeClaim: { claimName: raas-pvc }
+          - name: log-raas
+            persistentVolumeClaim: { claimName: raas-pvc }
+          - name: tmp
+            emptyDir: { medium: Memory }

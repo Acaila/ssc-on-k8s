@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: raas-config
+  namespace: aria-config
+data:
+  raas.conf: |
+    [database]
+    host = @@DB_HOST@@
+    name = @@DB_NAME@@
+    user = @@DB_USER@@
+    password = @@DB_PASS@@
+
+
+    [redis]
+    host = @@REDIS_HOST@@
+    port = @@REDIS_PORT@@
+
+
+    [server]
+    listen_host = 0.0.0.0
+    listen_port = 4507
