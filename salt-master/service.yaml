@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: salt-master
+  namespace: aria-config
+spec:
+  selector: { app: salt-master }
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - name: tcp-publisher
+      port: 4505
+      targetPort: 4505
+    - name: tcp-request
+      port: 4506
+      targetPort: 4506

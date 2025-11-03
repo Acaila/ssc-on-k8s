@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: salt-master
+  namespace: aria-config
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: salt-master } }
+  template:
+    metadata:
+      labels: { app: salt-master }
+        annotations:
+          container.apparmor.security.beta.kubernetes.io/salt-master: runtime/default
+    spec:
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: salt-master
+          image: docker.io/saltstack/salt:3007
+          command: ["/usr/bin/dumb-init", "--"]
+          args: ["salt-master", "-l", "info"]
+          ports:
+            - containerPort: 4505
+            - containerPort: 4506
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - name: etc-salt
+              mountPath: /etc/salt
+            - name: srv-salt
+              mountPath: /srv/salt
+            - name: cache
+              mountPath: /var/cache/salt
+            - name: logs
+              mountPath: /var/log/salt
+          readinessProbe:
+            tcpSocket: { port: 4506 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 4505 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+        volumes:
+          - name: etc-salt
+            persistentVolumeClaim: { claimName: salt-master-pvc }
+          - name: srv-salt
+            persistentVolumeClaim: { claimName: salt-master-pvc }
+          - name: cache
+            emptyDir: {}
+          - name: logs
+            emptyDir: {}
