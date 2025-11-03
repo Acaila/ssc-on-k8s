@@ -1,0 +1,49 @@
+# Dockerfile.raas — build RaaS on UBI9 (RHEL9 compatible)
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
+
+
+LABEL org.opencontainers.image.title="SSC RaaS (Aria Config)" \
+org.opencontainers.image.vendor="Your Org" \
+org.opencontainers.image.license="Proprietary" \
+org.opencontainers.image.source="internal"
+
+
+# RaaS listens on 4507 by default
+EXPOSE 4507
+
+
+# Install packages required by SSC RaaS runtime
+RUN microdnf -y install shadow-utils findutils gzip tar procps-ng which \
+python3 python3-pip openssl hostname libuuid \
+&& microdnf -y clean all
+
+
+# Add SSC RPMs to the image and install
+# Expectation: put your RPMs under ./rpms relative to Dockerfile
+ADD rpms/ /tmp/rpms/
+RUN rpm -Uvh --force --nodeps /tmp/rpms/*.rpm || true \
+&& rm -rf /tmp/rpms
+
+
+# Create runtime user & dirs (match paths used by SSC)
+RUN useradd -r -u 10001 -g root -d /opt/vmware/raas -s /sbin/nologin ssc \
+&& mkdir -p /etc/raas /var/log/raas /opt/vmware/raas/bin /bootstrap \
+&& chown -R ssc:root /etc/raas /var/log/raas /opt/vmware/raas
+
+
+# Copy bootstrap defaults (example raas.conf template) and entrypoint
+# Provide your own raas binary path if different (sometimes /opt/vmware/raas/bin/raas)
+COPY files/raas.conf.example /bootstrap/raas.conf
+COPY files/entrypoint.sh /entrypoint.sh
+RUN chmod 0755 /entrypoint.sh && chown -R ssc:root /bootstrap
+
+
+USER ssc
+VOLUME ["/etc/raas", "/var/log/raas"]
+
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD bash -lc 'exec 3<>/dev/tcp/127.0.0.1/4507 || exit 1'
+
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/opt/vmware/raas/bin/raas", "-c", "/etc/raas/raas.conf"]
