@@ -1,0 +1,9 @@
+# Exclude artifact payloads created locally
+artifacts-image/deployment.d/*
+artifacts-image/cloud.deploy.d/*
+artifacts-image/cloud.profiles.d/*
+
+# certs/keys etc...
+*.crt
+*.key
+*.pem
