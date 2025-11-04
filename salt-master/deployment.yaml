@@ -45,6 +45,15 @@ spec:
               mountPath: /var/log/salt
             - name: run
               mountPath: /var/run/salt
+            - name: minion-artifacts
+              mountPath: /etc/salt/deployment.d
+              subPath: deployment.d
+            - name: minion-artifacts
+              mountPath: /etc/salt/cloud.deploy.d
+              subPath: cloud.deploy.d
+            - name: minion-artifacts
+              mountPath: /etc/salt/cloud.profiles.d
+              subPath: cloud.profiles.d
           readinessProbe:
             tcpSocket: { port: 4506 }
             initialDelaySeconds: 10
@@ -55,12 +64,36 @@ spec:
             periodSeconds: 20
         volumes:
           - name: etc-salt
-            persistentVolumeClaim: { claimName: salt-master-pvc }
+            persistentVolumeClaim:
+              claimName: salt-master-pvc
           - name: srv-salt
-            persistentVolumeClaim: { claimName: salt-master-pvc }
+            persistentVolumeClaim: 
+              claimName: salt-master-pvc
           - name: cache
             emptyDir: {}
           - name: logs
             emptyDir: {}
           - name: run
             emptyDir: {}
+          - name: minion-artifacts
+            persistentVolumeClaim:
+              claimName: salt-minion-artifacts-pvc
+      initContainers:
+        - name: seed-minion-artifacts
+          image: registry.example.com/ssc/minion-artifacts:1.0   # <— override via kustomize
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              set -e
+              mkdir -p /out/deployment.d /out/cloud.deploy.d /out/cloud.profiles.d
+              cp -a /payload/deployment.d/* /out/deployment.d/ 2>/dev/null || true
+              cp -a /payload/cloud.deploy.d/* /out/cloud.deploy.d/ 2>/dev/null || true
+              cp -a /payload/cloud.profiles.d/* /out/cloud.profiles.d/ 2>/dev/null || true
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - name: minion-artifacts
+              mountPath: /out

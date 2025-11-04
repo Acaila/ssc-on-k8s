@@ -131,6 +131,13 @@ ssc-on-k8s/
 
 ---
 
+## Air-gapped minion artifacts
+
+If minion installers and bootstrap assets are required, this repo uses a content image + initContainer to copy them into a PVC. See `salt-master/ARTIFACTS.md`. Override the artifacts image in `kustomization.yaml` (images section).
+
+
+---
+
 ## Limitations and Next Steps
 
 - This configuration is single-pod per component and not highly available.

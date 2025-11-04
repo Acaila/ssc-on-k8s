@@ -2,23 +2,36 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: aria-config
 resources:
-- namespace.yaml
-- storage/pvc-postgres.yaml
-- storage/pvc-redis.yaml
-- storage/pvc-raas.yaml
-- storage/pvc-salt-master.yaml
-- config/raas-configmap.yaml
-- postgres/deployment.yaml
-- postgres/service.yaml
-- redis/deployment.yaml
-- redis/service.yaml
-- raas/deployment.yaml
-- raas/service.yaml
-- salt-master/deployment.yaml
-- salt-master/service.yaml
-- networkpolicy/00-default-deny.yaml
-- networkpolicy/01-allow-dns-egress.yaml
-- networkpolicy/10-raas.yaml
-- networkpolicy/11-postgres.yaml
-- networkpolicy/12-redis.yaml
-- networkpolicy/20-salt-master.yaml
+  - namespace.yaml
+  - storage/pvc-postgres.yaml
+  - storage/pvc-redis.yaml
+  - storage/pvc-raas.yaml
+  - storage/pvc-salt-master.yaml
+  - config/raas-configmap.yaml
+  - postgres/deployment.yaml
+  - postgres/service.yaml
+  - redis/deployment.yaml
+  - redis/service.yaml
+  - raas/deployment.yaml
+  - raas/service.yaml
+  - salt-master/deployment.yaml
+  - salt-master/service.yaml
+  - networkpolicy/00-default-deny.yaml
+  - networkpolicy/01-allow-dns-egress.yaml
+  - networkpolicy/10-raas.yaml
+  - networkpolicy/11-postgres.yaml
+  - networkpolicy/12-redis.yaml
+  - networkpolicy/20-salt-master.yaml
+  - storage/pvc-salt-minion-artifacts.yaml
+
+images:
+  # RaaS BYO image override
+  # If you have access to a prebuilt RaaS container upload it to your registry and reference it here.
+  - name: registry.local/ssc/raas
+    newName: registry.example.com/ssc/raas
+    newTag: 9.x
+
+  # Minion artifacts content image
+  - name: registry.example.com/ssc/minion-artifacts
+    newName: registry.example.com/ssc/minion-artifacts
+    newTag: 1.0
