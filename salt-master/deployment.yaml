@@ -43,6 +43,8 @@ spec:
               mountPath: /var/cache/salt
             - name: logs
               mountPath: /var/log/salt
+            - name: run
+              mountPath: /var/run/salt
           readinessProbe:
             tcpSocket: { port: 4506 }
             initialDelaySeconds: 10
@@ -59,4 +61,6 @@ spec:
           - name: cache
             emptyDir: {}
           - name: logs
+            emptyDir: {}
+          - name: run
             emptyDir: {}
