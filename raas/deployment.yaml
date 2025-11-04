@@ -65,8 +65,8 @@ spec:
             periodSeconds: 20
         volumes:
           - name: etc-raas
-            persistentVolumeClaim: { claimName: raas-pvc }
+            persistentVolumeClaim: { claimName: raas-etc-pvc }
           - name: log-raas
-            persistentVolumeClaim: { claimName: raas-pvc }
+            persistentVolumeClaim: { claimName: raas-logs-pvc }
           - name: tmp
             emptyDir: { medium: Memory }
