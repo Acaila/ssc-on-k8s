@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: salt-master-external
+  namespace: aria-config
+spec:
+  podSelector:
+    matchLabels:
+      app: salt-master
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0 # TODO: narrow to your minion CIDRs
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: aria-config
+      ports:
+        - protocol: TCP
+          port: 4505
+        - protocol: TCP
+          port: 4506
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0 # Needed for master to initiate any outbound comms
