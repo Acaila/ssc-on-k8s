@@ -1,4 +1,3 @@
-# Minimal RaaS config — adjust to your SSC version
 [database]
 host = @@DB_HOST@@
 name = @@DB_NAME@@
@@ -13,5 +12,5 @@ port = @@REDIS_PORT@@
 listen_host = 0.0.0.0
 listen_port = 4507
 # tls_cert = /etc/raas/tls/server.crt
-# tls_key = /etc/raas/tls/server.key
-# ca_file = /etc/raas/tls/ca.crt
+# tls_key  = /etc/raas/tls/server.key
+# ca_file  = /etc/raas/tls/ca.crt

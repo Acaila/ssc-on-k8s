@@ -1,49 +1,74 @@
-# Dockerfile.raas — build RaaS on UBI9 (RHEL9 compatible)
+# RaaS 8.18.2 on UBI9 minimal
+# Build context must include:
+#  - rpms/ (at least the RaaS RPM(s))
+#  - keys/ (Broadcom/VMware GPG public key used to sign the RPMs)
+#
+# Example:
+#   rpms/vmware-raas-8.18.2-1.el9.x86_64.rpm
+#   keys/Broadcom-VMware-SaltStack-GPG.pub
+
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
 
+LABEL org.opencontainers.image.title="SSC RaaS" \
+      org.opencontainers.image.version="8.18.2" \
+      org.opencontainers.image.vendor="Broadcom (VMware)" \
+      org.opencontainers.image.licenses="Proprietary" \
+      org.opencontainers.image.source="internal"
 
-LABEL org.opencontainers.image.title="SSC RaaS (Aria Config)" \
-org.opencontainers.image.vendor="Your Org" \
-org.opencontainers.image.license="Proprietary" \
-org.opencontainers.image.source="internal"
-
-
-# RaaS listens on 4507 by default
+# RaaS default port
 EXPOSE 4507
 
+# Base packages commonly required by RaaS runtime and healthy container ops
+# (If RaaS RPM pulls deps, these keep image lean while providing essentials)
+RUN microdnf -y install \
+      shadow-utils \
+      python3 \
+      openssl \
+      hostname \
+      which \
+      gzip \
+      tar \
+      procps-ng \
+      findutils \
+    && microdnf -y clean all
 
-# Install packages required by SSC RaaS runtime
-RUN microdnf -y install shadow-utils findutils gzip tar procps-ng which \
-python3 python3-pip openssl hostname libuuid \
-&& microdnf -y clean all
-
-
-# Add SSC RPMs to the image and install
-# Expectation: put your RPMs under ./rpms relative to Dockerfile
+# Copy signing key(s) and RPM(s) into image
+ADD keys/ /tmp/keys/
 ADD rpms/ /tmp/rpms/
-RUN rpm -Uvh --force --nodeps /tmp/rpms/*.rpm || true \
-&& rm -rf /tmp/rpms
 
+# Import GPG key, verify RPM, then install
+# - rpm --import: add key to the RPM DB
+# - rpm -K: cryptographic signature check; --nosignatures if your pipeline already verified
+# - rpm -Uvh: install/upgrade package
+RUN set -euo pipefail; \
+    find /tmp/keys -type f -name '*.pub' -exec rpm --import {} \; ; \
+    for p in /tmp/rpms/*.rpm; do \
+      echo "Verifying signature: ${p}"; \
+      rpm -K "${p}"; \
+    done; \
+    rpm -Uvh /tmp/rpms/*.rpm; \
+    rm -rf /tmp/rpms /tmp/keys
 
-# Create runtime user & dirs (match paths used by SSC)
-RUN useradd -r -u 10001 -g root -d /opt/vmware/raas -s /sbin/nologin ssc \
-&& mkdir -p /etc/raas /var/log/raas /opt/vmware/raas/bin /bootstrap \
-&& chown -R ssc:root /etc/raas /var/log/raas /opt/vmware/raas
+# Create runtime user and dirs used by RaaS
+# NOTE: Some RPMs will create these; this is idempotent and ensures ownership.
+RUN useradd -r -u 10001 -g root -d /opt/vmware/raas -s /sbin/nologin ssc || true && \
+    mkdir -p /etc/raas /var/log/raas /opt/vmware/raas/bin /bootstrap && \
+    chown -R ssc:root /etc/raas /var/log/raas /opt/vmware/raas /bootstrap
 
-
-# Copy bootstrap defaults (example raas.conf template) and entrypoint
-# Provide your own raas binary path if different (sometimes /opt/vmware/raas/bin/raas)
+# Seed a minimal config template + entrypoint
+# (Implementer can mount a real raas.conf via PVC/ConfigMap later)
 COPY files/raas.conf.example /bootstrap/raas.conf
 COPY files/entrypoint.sh /entrypoint.sh
 RUN chmod 0755 /entrypoint.sh && chown -R ssc:root /bootstrap
 
-
 USER ssc
+
+# Persist configs and logs outside the image
 VOLUME ["/etc/raas", "/var/log/raas"]
 
-
+# Simple healthcheck: TCP open on 4507
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD bash -lc 'exec 3<>/dev/tcp/127.0.0.1/4507 || exit 1'
 
-
 ENTRYPOINT ["/entrypoint.sh"]
+# Common install path for RaaS binary; adjust if your RPM installs elsewhere.
 CMD ["/opt/vmware/raas/bin/raas", "-c", "/etc/raas/raas.conf"]
