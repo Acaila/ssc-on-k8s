@@ -50,7 +50,8 @@ ssc-on-k8s/
 │   ├── pvc-postgres.yaml
 │   ├── pvc-redis.yaml
 │   ├── pvc-raas.yaml
-│   └── pvc-salt-master.yaml
+│   ├── pvc-salt-master.yaml
+│   └── pvc-salt-minion-artifacts.yaml
 ├── config/
 │   └── raas-configmap.yaml
 ├── postgres/
@@ -63,6 +64,7 @@ ssc-on-k8s/
 │   ├── deployment.yaml
 │   └── service.yaml
 ├── salt-master/
+│   ├── ARTIFACTS.md
 │   ├── deployment.yaml
 │   └── service.yaml
 ├── networkpolicy/
@@ -73,6 +75,9 @@ ssc-on-k8s/
 │   ├── 12-redis.yaml
 │   └── 20-salt-master.yaml
 ├── secrets/
+│   └── README.md
+├── artifacts-image/
+│   ├── Dockerfile
 │   └── README.md
 └── Dockerfiles/
     └── Dockerfile.raas
@@ -88,19 +93,30 @@ ssc-on-k8s/
    docker push harbor.local/ssc/raas:9.x
    ```
 
-2. Create the namespace, PVCs, and configuration map:
+2. (Optional) Build and push the Minion Artifacts image if air-gapped support is needed:
+   ```bash
+   docker build -t registry.example.com/ssc/minion-artifacts:1.0 artifacts-image/
+   docker push registry.example.com/ssc/minion-artifacts:1.0
+   ```
+   *Update the image reference in `kustomization.yaml` to match your registry.*
+
+3. Create the namespace, PVCs, and configuration map:
    ```bash
    kubectl apply -f namespace.yaml
    kubectl apply -f storage/
    kubectl apply -f config/
    ```
 
-3. Create the required secrets (see `secrets/README.md` for examples):
+4. Create the required secrets (see `secrets/README.md` for examples):
    ```bash
-   kubectl -n aria-config create secret generic ssc-db      --from-literal=host=postgres      --from-literal=name=raas      --from-literal=user=raas      --from-literal=password='S3cr3tP@ss'
+   kubectl -n aria-config create secret generic ssc-db \
+     --from-literal=host=postgres \
+     --from-literal=name=raas \
+     --from-literal=user=raas \
+     --from-literal=password='S3cr3tP@ss'
    ```
 
-4. Deploy the components:
+5. Deploy the components:
    ```bash
    kubectl apply -f postgres/
    kubectl apply -f redis/
@@ -109,7 +125,7 @@ ssc-on-k8s/
    kubectl apply -f networkpolicy/
    ```
 
-5. Verify that the pods are running:
+6. Verify that the pods are running:
    ```bash
    kubectl get pods -n aria-config
    ```
@@ -133,7 +149,10 @@ ssc-on-k8s/
 
 ## Air-gapped minion artifacts
 
-If minion installers and bootstrap assets are required, this repo uses a content image + initContainer to copy them into a PVC. See `salt-master/ARTIFACTS.md`. Override the artifacts image in `kustomization.yaml` (images section).
+If minion installers and bootstrap assets are required (e.g. for air-gapped deployments), this repo uses a content image + initContainer to copy them into a PVC. 
+
+See `salt-master/ARTIFACTS.md` for details on what files to place in the `artifacts-image/` directory before building.
+Override the artifacts image in `kustomization.yaml` (images section).
 
 
 ---
