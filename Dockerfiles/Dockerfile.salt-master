@@ -1,0 +1,20 @@
+FROM rockylinux:9
+
+RUN set -eux; \
+    dnf -y install dnf-plugins-core ca-certificates; \
+    curl -fsSL \
+      https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo \
+      -o /etc/yum.repos.d/salt.repo; \
+    dnf clean expire-cache; \
+    LATEST_3006="$(dnf repoquery --showduplicates --qf '%{version}' salt-master | grep -E '^3006\.' | sort -V | tail -n1)"; \
+    test -n "${LATEST_3006}"; \
+    echo "Installing Salt LTS version: ${LATEST_3006}"; \
+    dnf -y install "salt-master-${LATEST_3006}"; \
+    dnf clean all; \
+    rm -rf /var/cache/dnf
+
+RUN mkdir -p /etc/salt /srv/salt /var/log/salt /var/cache/salt /var/run/salt
+
+EXPOSE 4505 4506
+
+CMD ["/opt/saltstack/salt/salt-master", "-l", "info"]
