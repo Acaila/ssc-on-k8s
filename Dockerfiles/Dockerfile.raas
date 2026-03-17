@@ -1,28 +1,22 @@
-# RaaS 8.18.2 on UBI9 minimal
-# Build context must include:
-#  - rpms/ (at least the RaaS RPM(s))
-#  - keys/ (Broadcom/VMware GPG public key used to sign the RPMs)
-#
-# Example:
-#   rpms/vmware-raas-8.18.2-1.el9.x86_64.rpm
-#   keys/Broadcom-VMware-SaltStack-GPG.pub
-
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
 
 LABEL org.opencontainers.image.title="SSC RaaS" \
-      org.opencontainers.image.version="8.18.2" \
+      org.opencontainers.image.version="8.18.3" \
       org.opencontainers.image.vendor="Broadcom (VMware)" \
       org.opencontainers.image.licenses="Proprietary" \
       org.opencontainers.image.source="internal"
 
-# RaaS default port
 EXPOSE 4507
 
-# Base packages commonly required by RaaS runtime and healthy container ops
-# (If RaaS RPM pulls deps, these keep image lean while providing essentials)
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONPATH=/opt/saltstack/raas:/app/raas
+ENV RAAS_STATIC_DIR=/opt/saltstack/raas/static
+
 RUN microdnf -y install \
       shadow-utils \
-      python3 \
+      python3.11 \
+      python3.11-devel \
       openssl \
       hostname \
       which \
@@ -30,45 +24,60 @@ RUN microdnf -y install \
       tar \
       procps-ng \
       findutils \
-    && microdnf -y clean all
+      sed \
+    && microdnf clean all
 
-# Copy signing key(s) and RPM(s) into image
 ADD keys/ /tmp/keys/
 ADD rpms/ /tmp/rpms/
 
-# Import GPG key, verify RPM, then install
-# - rpm --import: add key to the RPM DB
-# - rpm -K: cryptographic signature check; --nosignatures if your pipeline already verified
-# - rpm -Uvh: install/upgrade package
-RUN set -euo pipefail; \
-    find /tmp/keys -type f -name '*.pub' -exec rpm --import {} \; ; \
-    for p in /tmp/rpms/*.rpm; do \
-      echo "Verifying signature: ${p}"; \
-      rpm -K "${p}"; \
-    done; \
-    rpm -Uvh /tmp/rpms/*.rpm; \
-    rm -rf /tmp/rpms /tmp/keys
+RUN set -eux; \
+    find /tmp/keys -type f \( -name '*.pub' -o -name '*.asc' -o -name '*.gpg' \) -exec rpm --import {} \; || true; \
+    rpm -K /tmp/rpms/raas/*.rpm; \
+    rpm -Uvh \
+      /tmp/rpms/deps/libsodium-*.rpm \
+      /tmp/rpms/deps/libtool-ltdl-*.rpm \
+      /tmp/rpms/deps/libxslt-*.rpm \
+      /tmp/rpms/deps/xmlsec1-*.rpm \
+      /tmp/rpms/deps/xmlsec1-openssl-*.rpm \
+      /tmp/rpms/raas/*.rpm; \
+    rm -rf /tmp/rpms /tmp/keys; \
+    /usr/sbin/ldconfig || true
 
-# Create runtime user and dirs used by RaaS
-# NOTE: Some RPMs will create these; this is idempotent and ensures ownership.
-RUN useradd -r -u 10001 -g root -d /opt/vmware/raas -s /sbin/nologin ssc || true && \
-    mkdir -p /etc/raas /var/log/raas /opt/vmware/raas/bin /bootstrap && \
-    chown -R ssc:root /etc/raas /var/log/raas /opt/vmware/raas /bootstrap
+RUN mkdir -p \
+      /etc/raas \
+      /etc/raas/pki \
+      /etc/pki/raas/certs \
+      /var/cache/raas \
+      /var/lib/raas \
+      /var/log/raas \
+      /var/run/raas \
+      /bootstrap && \
+    chown -R raas:raas \
+      /etc/raas \
+      /etc/pki/raas \
+      /var/cache/raas \
+      /var/lib/raas \
+      /var/log/raas \
+      /var/run/raas \
+      /opt/saltstack/raas \
+      /bootstrap
 
-# Seed a minimal config template + entrypoint
-# (Implementer can mount a real raas.conf via PVC/ConfigMap later)
-COPY files/raas.conf.example /bootstrap/raas.conf
-COPY files/entrypoint.sh /entrypoint.sh
-RUN chmod 0755 /entrypoint.sh && chown -R ssc:root /bootstrap
+COPY Dockerfiles/files/raas.example /bootstrap/raas
+COPY Dockerfiles/files/entrypoint.sh /entrypoint.sh
+RUN chmod 0755 /entrypoint.sh && chown -R raas:raas /bootstrap
 
-USER ssc
+RUN printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'exec /opt/saltstack/raas/bin/python3 -m alembic "$@"' \
+  > /usr/local/bin/alembic \
+  && chmod 0755 /usr/local/bin/alembic
 
-# Persist configs and logs outside the image
-VOLUME ["/etc/raas", "/var/log/raas"]
+USER raas
 
-# Simple healthcheck: TCP open on 4507
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD bash -lc 'exec 3<>/dev/tcp/127.0.0.1/4507 || exit 1'
+VOLUME ["/etc/raas", "/var/log/raas", "/var/lib/raas", "/var/cache/raas"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=10 \
+  CMD /opt/saltstack/raas/bin/python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',4507)); s.close()"
 
 ENTRYPOINT ["/entrypoint.sh"]
-# Common install path for RaaS binary; adjust if your RPM installs elsewhere.
-CMD ["/opt/vmware/raas/bin/raas", "-c", "/etc/raas/raas.conf"]
+CMD ["/opt/saltstack/raas/scripts/raas", "-c", "/etc/raas"]
