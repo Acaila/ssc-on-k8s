@@ -1,9 +1,26 @@
-# Exclude artifact payloads created locally
+# --- Artifact payloads (local only) ---
 artifacts-image/deployment.d/*
 artifacts-image/cloud.deploy.d/*
 artifacts-image/cloud.profiles.d/*
 
-# certs/keys etc...
+# --- Salt / SSC install payloads ---
+rpms/*
+keys/*
+
+# allow placeholder files so directories exist in repo
+!rpms/.gitkeep
+!keys/.gitkeep
+
+# --- Secrets / certificates ---
 *.crt
 *.key
 *.pem
+
+# --- RPM payloads ---
+*.rpm
+
+# Airgap payload bundles
+*.tar
+*.tar.gz
+*.tgz
+*.zip
