@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.title="SSC RaaS" \
       org.opencontainers.image.licenses="Proprietary" \
       org.opencontainers.image.source="internal"
 
-EXPOSE 4507
+EXPOSE 443
 
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
@@ -62,8 +62,8 @@ RUN mkdir -p \
       /opt/saltstack/raas \
       /bootstrap
 
-COPY Dockerfiles/files/raas.example /bootstrap/raas
-COPY Dockerfiles/files/entrypoint.sh /entrypoint.sh
+COPY images/files/raas.example /bootstrap/raas
+COPY images/files/entrypoint-raas.sh /entrypoint.sh
 RUN chmod 0755 /entrypoint.sh && chown -R raas:raas /bootstrap
 
 RUN printf '%s\n' \

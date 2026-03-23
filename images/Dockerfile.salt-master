@@ -1,7 +1,7 @@
 FROM rockylinux:9
 
 RUN set -eux; \
-    dnf -y install dnf-plugins-core ca-certificates curl; \
+    dnf -y install dnf-plugins-core ca-certificates; \
     curl -fsSL \
       https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo \
       -o /etc/yum.repos.d/salt.repo; \

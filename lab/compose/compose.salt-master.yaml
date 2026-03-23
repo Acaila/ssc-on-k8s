@@ -21,7 +21,10 @@ services:
     networks:
       - ssc-net
     volumes:
-      - ../config/salt:/etc/salt:Z
+      - ../config/salt/master:/etc/salt/master:Z
+      - ../config/salt/pillar:/etc/salt/pillar:Z
+      - ../config/salt/pki/master:/etc/salt/pki/master:Z
+      - ../config/salt/master.d:/etc/salt/master.d:Z
       - ../artifacts/salt:/srv/salt:Z
       - ../logs/salt:/var/log/salt:Z
       - ../tmp/salt/cache:/var/cache/salt:Z

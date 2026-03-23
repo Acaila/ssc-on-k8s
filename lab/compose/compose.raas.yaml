@@ -17,7 +17,7 @@ services:
       REDIS_PORT: "6379"
       RAAS_PORT: "4507"
     ports:
-      - "4507:4507"
+      - "443:443"
     networks:
       - ssc-net
     volumes:
@@ -26,7 +26,7 @@ services:
       - ../data/raas:/var/lib/raas:Z
       - ../tmp/raas:/var/cache/raas:Z
     healthcheck:
-      test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',4507)); s.close()"]
+      test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',443)); s.close()"]
       interval: 30s
       timeout: 5s
       retries: 10

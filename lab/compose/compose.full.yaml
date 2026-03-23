@@ -41,63 +41,80 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  raas:
+    build:
+      context: ../..
+      dockerfile: images/Dockerfile.raas
+    image: localhost/ssc-raas:8.18.3
+    container_name: ssc-raas
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: ssc-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: raas
+      POSTGRES_USER: raas
+      POSTGRES_PASSWORD: raaspass
+      REDIS_HOST: ssc-redis
+      REDIS_PORT: "6379"
+      RAAS_PORT: "4507"
+    ports:
+      - "443:443"
+    networks:
+      - ssc-net
+    volumes:
+      - ../config/raas:/etc/raas:Z,U
+      - ../logs/raas:/var/log/raas:Z,U
+      - ../data/raas:/var/lib/raas:Z,U
+      - ../tmp/raas:/var/cache/raas:Z,U
+    healthcheck:
+      test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',443)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
   salt-master:
+    build:
+      context: ../..
+      dockerfile: images/Dockerfile.salt-master
     image: localhost/ssc-salt-master:3006-lts
     container_name: ssc-salt-master
+    depends_on:
+      raas:
+        condition: service_healthy
+    environment:
+      SALT_MASTER_ID: saltmaster1
+      RAAS_HOST: ssc-raas
+      RAAS_PORT: "443"
+      RAAS_SCHEME: https
+      EAPI_CLUSTER_ID: salt
+      EAPI_FAILOVER_MASTER: "False"
+      EAPI_SSL_VALIDATION: "False"
     ports:
       - "4505:4505"
       - "4506:4506"
     networks:
       - ssc-net
     volumes:
-      - ../config/salt:/etc/salt:Z
+      - ../config/salt/master:/etc/salt/master:Z
+      - ../config/salt/pillar:/etc/salt/pillar:Z
+      - ../config/salt/pki/master:/etc/salt/pki/master:Z
+      - ../config/salt/master.d:/etc/salt/master.d:Z
       - ../artifacts/salt:/srv/salt:Z
       - ../logs/salt:/var/log/salt:Z
       - ../tmp/salt/cache:/var/cache/salt:Z
       - ../tmp/salt/run:/var/run/salt:Z
-    depends_on:
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "/opt/saltstack/salt/salt-master", "--version"]
       interval: 15s
       timeout: 5s
       retries: 10
       start_period: 20s
-    restart: unless-stopped
-
-  raas:
-    image: localhost/ssc-raas:8.18.3
-    container_name: ssc-raas
-    ports:
-      - "4507:4507"
-    networks:
-      - ssc-net
-    environment:
-      RAAS_DB_HOST: postgres
-      RAAS_DB_NAME: raas
-      RAAS_DB_USER: raas
-      RAAS_DB_PASS: raaspass
-      RAAS_REDIS_HOST: redis
-      RAAS_REDIS_PORT: "6379"
-    volumes:
-      - ../config/raas:/etc/raas:Z,U
-      - ../logs/raas:/var/log/raas:Z,U
-      - ../data/raas:/var/lib/raas:Z,U
-      - ../tmp/raas:/var/cache/raas:Z,U
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      salt-master:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',4507)); s.close()"]
-      interval: 30s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
     restart: unless-stopped
 
 networks:
