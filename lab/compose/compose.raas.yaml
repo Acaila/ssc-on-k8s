@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  raas:
+    build:
+      context: ../..
+      dockerfile: images/Dockerfile.raas
+    image: localhost/ssc-raas:8.18.3
+    container_name: ssc-raas
+    environment:
+      POSTGRES_HOST: ssc-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: raas
+      POSTGRES_USER: raas
+      POSTGRES_PASSWORD: raaspass
+      REDIS_HOST: ssc-redis
+      REDIS_PORT: "6379"
+      RAAS_PORT: "4507"
+    ports:
+      - "4507:4507"
+    networks:
+      - ssc-net
+    volumes:
+      - ../config/raas:/etc/raas:Z
+      - ../logs/raas:/var/log/raas:Z
+      - ../data/raas:/var/lib/raas:Z
+      - ../tmp/raas:/var/cache/raas:Z
+    healthcheck:
+      test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',4507)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+networks:
+  ssc-net:
+    external: true

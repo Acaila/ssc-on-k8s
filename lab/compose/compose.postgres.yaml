@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: docker.io/postgres:15-alpine
+    container_name: ssc-postgres
+    environment:
+      POSTGRES_DB: raas
+      POSTGRES_USER: raas
+      POSTGRES_PASSWORD: raaspass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    networks:
+      - ssc-net
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raas -d raas"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  ssc-net:
+    external: true

@@ -1,0 +1,135 @@
+customer_id: "a6a6ac52-84b7-4aea-b3e8-7479032a88bc"
+
+sql:
+  dialect: postgresql
+  host: postgres
+  port: 5432
+  driver: psycopg2
+  ssl: false
+
+redis:
+  url: redis://redis:6379
+
+port: 4507
+
+background_workers:
+  combined_process: true
+  broker: redis
+  backend: redis
+  log_level: warning
+  celery:
+    concurrency: 0
+    max_tasks: 100000
+    max_memory: 0
+    result_expires: 60
+    prefetch_multiplier: 1
+    without_heartbeat: false
+    without_mingle: true
+    without_gossip: true
+    use_fair_scheduler: true
+  lr:
+    concurrency: 0
+    max_tasks: 100000
+    max_memory: 0
+    result_expires: 60
+    prefetch_multiplier: 1
+    without_heartbeat: false
+    without_mingle: true
+    without_gossip: true
+    use_fair_scheduler: true
+  grainscache:
+    concurrency: 0
+    max_tasks: 100000
+    max_memory: 0
+    result_expires: 60
+    prefetch_multiplier: 1
+    without_heartbeat: false
+    without_mingle: true
+    without_gossip: true
+    use_fair_scheduler: true
+
+enable_grains_indexing: true
+fs_returns_max: 0
+
+interface: 0.0.0.0
+strict_transport_security_header_enabled: false
+tornado_xsrf_cookies_enabled: true
+webserver_max_memory: 0
+webserver_max_time: 0
+websocket_debounce: 5
+websocket_polling: 15
+websocket_ping_interval: 15
+websocket_ping_timeout: 600
+
+jwt:
+  max_logins: 10000
+  expires: 36000
+  login_expires: 60
+  algorithm: HS256
+
+login_banner:
+  enabled: false
+  style: info
+  message: ''
+
+target_groups_from_master_only: false
+
+cache_cycle: 30
+clean_up_cycle: 900
+job_unresponsive_check: 5
+job_unresponsive_check_stop: 2880
+master_pending_key_expiration: 7200
+master_unresponsive_check_limit: 2
+minion_onboarding_throttle: 0
+password_sleep: 30
+password_attempts: 50
+raas_presence_expiration: 3600
+retry_timeout_multiplier: 3
+schedule_cycle: 10
+
+log_datefmt: '%H:%M:%S'
+log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
+log_file: /var/log/raas/raas
+log_file_loglevel: error
+log_fmt_console: '[%(levelname)-8s] %(message)s'
+log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s:%(lineno)-4d][%(processName)s:%(process)d] %(message)s'
+log_level: error
+
+audit:
+  enabled: false
+  auth: false
+  valid_logins: false
+  tasks: false
+  rpc: false
+  rpc_max_payload: 100
+  system: false
+
+sec:
+  stats_snapshot_interval: 3600
+  ingest_on_boot: false
+  username: secops
+  ingest_custom_override: true
+  delete_old_policy_files_interval: 86400
+  compile_stats_interval: 10
+  content_url: https://enterprise.saltstack.com/secops_downloads
+  archive_interval: 300
+  content_lock_timeout: 60
+  old_policy_file_lifespan: 2
+  locke_dir: locke
+  ingest_saltstack_override: true
+  post_ingest_cleanup: true
+  content_lock_block_timeout: 120
+  download_frequency: 86400
+  download_enabled: false
+
+vman:
+  vman_dir: vman
+  download_enabled: false
+  download_frequency: 86400
+  username: vman
+  content_url: https://enterprise.saltstack.com/vman_downloads
+  ingest_on_boot: false
+  compile_stats_interval: 60
+  stats_snapshot_interval: 3600
+  old_policy_file_lifespan: 2
+  delete_old_policy_files_interval: 86400

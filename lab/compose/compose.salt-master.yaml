@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  salt-master:
+    build:
+      context: ../..
+      dockerfile: images/Dockerfile.salt-master
+    image: localhost/ssc-salt-master:3006-lts
+    container_name: ssc-salt-master
+    environment:
+      SALT_MASTER_ID: saltmaster1
+      RAAS_HOST: ssc-raas
+      RAAS_PORT: "443"
+      RAAS_SCHEME: https
+      EAPI_CLUSTER_ID: salt
+      EAPI_FAILOVER_MASTER: "False"
+      EAPI_SSL_VALIDATION: "False"
+    ports:
+      - "4505:4505"
+      - "4506:4506"
+    networks:
+      - ssc-net
+    volumes:
+      - ../config/salt:/etc/salt:Z
+      - ../artifacts/salt:/srv/salt:Z
+      - ../logs/salt:/var/log/salt:Z
+      - ../tmp/salt/cache:/var/cache/salt:Z
+      - ../tmp/salt/run:/var/run/salt:Z
+    healthcheck:
+      test: ["CMD", "/opt/saltstack/salt/salt-master", "--version"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  ssc-net:
+    external: true

@@ -1,0 +1,18 @@
+interface: 0.0.0.0
+publish_port: 4505
+ret_port: 4506
+
+auto_accept: true
+open_mode: true
+
+log_level: info
+
+file_roots:
+  base:
+    - /srv/salt
+
+pillar_roots:
+  base:
+    - /etc/salt/pillar
+
+worker_threads: 5
