@@ -53,5 +53,3 @@ RaaS login for first access to the UI:
 
 That is used for first login so an operator can approve the pending Salt master
 key and complete initial validation.
-
-For any non-lab deployment, change that password immediately after first login.

@@ -243,8 +243,6 @@ default credentials:
 - username: `root`
 - password: `salt`
 
-For any non-lab deployment, change that password immediately after first login.
-
 After RaaS is healthy, you can start the salt-master:
 
 ```bash

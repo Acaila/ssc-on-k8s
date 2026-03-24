@@ -202,7 +202,6 @@ For the currently validated first-login flow, use:
 After login:
 
 1. approve the pending Salt master key
-2. change the default password immediately for any non-lab deployment
 
 ## 9. Verify Salt-Master Registration
 

@@ -210,8 +210,6 @@ credentials:
 - username: `root`
 - password: `salt`
 
-For any non-lab deployment, change that password immediately after first login.
-
 After approval, recheck the salt-master logs:
 
 ```bash
