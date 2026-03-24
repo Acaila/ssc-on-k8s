@@ -181,6 +181,19 @@ https://localhost
 Because the lab generates a self-signed certificate when no certificate is
 provided, a browser warning is expected on first access.
 
+If local port `443` is already in use on the workstation, forward the RaaS
+service to another local port instead:
+
+```bash
+kubectl -n aria-config port-forward svc/raas 8443:443
+```
+
+Then browse to:
+
+```text
+https://localhost:8443
+```
+
 For the currently validated first-login flow, use:
 
 - username: `root`
