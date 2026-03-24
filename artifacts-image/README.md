@@ -1,16 +1,13 @@
-Build:
+# Artifacts Image Placeholder
 
-  `docker build -t registry.example.com/ssc/minion-artifacts:1.0 artifacts-image/`
+This directory is reserved for a later phase of the project covering pre-staged
+salt-minion installers and related bootstrap assets.
 
-Push:
+It is not part of the current validated workflow.
 
-  `docker push registry.example.com/ssc/minion-artifacts:1.0`
+If this area is revived later, document:
 
-Directory layout (next to Dockerfile):
-```
-  artifacts-image/
-    Dockerfile
-    deployment.d/
-    cloud.deploy.d/
-    cloud.profiles.d/
-```
+- the expected directory layout beside the Dockerfile
+- the image build command
+- the registry/tagging conventions
+- how the resulting image is consumed by the salt-master deployment

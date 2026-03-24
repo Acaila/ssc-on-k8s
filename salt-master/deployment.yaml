@@ -1,3 +1,6 @@
+# Placeholder only.
+# This file is retained as a design stub while the validated workflow remains
+# focused on container image builds and local Docker validation.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

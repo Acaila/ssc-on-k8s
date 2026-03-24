@@ -1,3 +1,7 @@
+# Placeholder only.
+# This namespace manifest reflects the intended target namespace for later
+# Kubernetes work, but the repo's validated workflow today is image building
+# and local Docker-based testing.
 apiVersion: v1
 kind: Namespace
 metadata:

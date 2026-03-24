@@ -2,12 +2,17 @@ version: "3.9"
 
 services:
   salt-master:
+    # SSEAPE and the packaged Salt build are x86_64, so default to amd64 on
+    # desktop hosts that are not already x86_64, in the same way as RaaS.
+    platform: ${SSC_IMAGE_PLATFORM:-linux/amd64}
     build:
       context: ../..
       dockerfile: images/Dockerfile.salt-master
     image: localhost/ssc-salt-master:3006-lts
     container_name: ssc-salt-master
     environment:
+      # Point the master at RaaS over the same HTTPS endpoint used in the
+      # target Kubernetes design so plugin behavior matches the intended model.
       SALT_MASTER_ID: saltmaster1
       RAAS_HOST: ssc-raas
       RAAS_PORT: "443"
@@ -21,6 +26,8 @@ services:
     networks:
       - ssc-net
     volumes:
+      # Keep the master config, PKI, and cache on host-backed paths so keys and
+      # generated state survive container recreation during lab work.
       - ../config/salt/master:/etc/salt/master:Z
       - ../config/salt/pillar:/etc/salt/pillar:Z
       - ../config/salt/pki/master:/etc/salt/pki/master:Z
@@ -39,4 +46,6 @@ services:
 
 networks:
   ssc-net:
-    external: true
+    # Match the shared lab network name used by the other compose files so the
+    # master can resolve the dependency service names without manual setup.
+    name: ssc-net

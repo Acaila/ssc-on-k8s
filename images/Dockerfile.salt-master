@@ -29,46 +29,6 @@ COPY lab/compose/files/entrypoint.salt-master.sh /usr/local/bin/entrypoint.sh
 RUN set -eux; \
     /opt/saltstack/salt/salt-pip install /tmp/whl/SSEAPE-8.18.3.6-py3-none-any.whl
 
-RUN set -eux; \
-    EGG_PATH="$(/opt/saltstack/salt/bin/python3 -c 'import site; print(site.getsitepackages()[0])')"; \
-    cat > /etc/salt/master.d/eAPIMasterPaths.conf <<EOF
-# Engines External Modules Path(s)
-engines_dirs:
-- ${EGG_PATH}/sseape/engines
-
-# Fileserver External Modules Path(s)
-fileserver_dirs:
-- ${EGG_PATH}/sseape/fileserver
-
-# Pillar External Modules Path(s)
-pillar_dirs:
-- ${EGG_PATH}/sseape/pillar
-
-# Returner External Modules Path(s)
-returner_dirs:
-- ${EGG_PATH}/sseape/returners
-
-# Roster External Modules Path(s)
-roster_dirs:
-- ${EGG_PATH}/sseape/roster
-
-# Runner External Modules Path(s)
-runner_dirs:
-- ${EGG_PATH}/sseape/runners
-
-# Module External Modules Path(s)
-module_dirs:
-- ${EGG_PATH}/sseape/modules
-
-# Proxy External Modules Path(s)
-proxy_dirs:
-- ${EGG_PATH}/sseape/proxy
-
-# State External Modules Path(s)
-states_dirs:
-- ${EGG_PATH}/sseape/states
-EOF
-
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 4505 4506

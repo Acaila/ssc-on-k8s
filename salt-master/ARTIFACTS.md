@@ -1,12 +1,19 @@
-Air-gapped minion artifacts
-===========================
+# Salt Master Artifacts Placeholder
 
-RaaS/Salt may need pre-staged installers and bootstrap assets for air gapped eployments.
+This file is a placeholder for a later phase of the project.
 
-Expected in the salt-master container:
-- /etc/salt/deployment.d/      (minion binaries/installers)
-- /etc/salt/cloud.deploy.d/    (bootstrap scripts/templates)
-- /etc/salt/cloud.profiles.d/  (cloud profiles)
+The original intent was to support pre-staged salt-minion installers and other
+bootstrap assets for air-gapped or Aria Automation-integrated deployments.
+That path is not part of the current validated workflow.
 
-This repo uses a content image + initContainer to copy files into a PVC at startup.
-Update the image reference in kustomization.yaml to point to your internal registry.
+Current status:
+
+- the top-level `bundle/` directory may contain the separate minion bundle
+- the active image build flow does not consume that bundle yet
+- the public test focus for this repo is the RaaS and salt-master image build process
+
+When this area is resumed, document:
+
+- the expected artifact layout
+- how the artifacts image is built
+- how those assets are presented to the salt-master in Kubernetes

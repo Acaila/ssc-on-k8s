@@ -1,3 +1,6 @@
+# Placeholder only.
+# This manifest is design-direction reference material and is not part of a
+# validated Kubernetes deployment bundle yet.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

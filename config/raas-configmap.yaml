@@ -1,22 +1,26 @@
+# Placeholder example only.
+# This file is not part of an actively validated Kubernetes deployment path.
+# Keep it as a reference for the intended RaaS configuration shape when the
+# Kubernetes work resumes.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: raas-config
   namespace: aria-config
 data:
-  raas.conf: |
-    [database]
-    host = @@DB_HOST@@
-    name = @@DB_NAME@@
-    user = @@DB_USER@@
-    password = @@DB_PASS@@
-
-
-    [redis]
-    host = @@REDIS_HOST@@
-    port = @@REDIS_PORT@@
-
-
-    [server]
-    listen_host = 0.0.0.0
-    listen_port = 4507
+  raas: |
+    # Example only. The current validated source for container runtime config is
+    # images/files/raas.example plus the RaaS entrypoint logic.
+    port: 443
+    tls_crt: /etc/pki/raas/certs/localhost.crt
+    tls_key: /etc/pki/raas/certs/localhost.key
+    sql:
+      driver: postgresql
+      host: @@DB_HOST@@
+      port: 5432
+      db: @@DB_NAME@@
+      user: @@DB_USER@@
+      passwd: @@DB_PASS@@
+    redis:
+      host: @@REDIS_HOST@@
+      port: @@REDIS_PORT@@

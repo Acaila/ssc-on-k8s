@@ -2,6 +2,8 @@ version: "3.9"
 
 services:
   postgres:
+    # Stock infra dependencies stay native-arch; only Broadcom-provided images
+    # need explicit amd64 handling on non-x86 desktop hosts.
     image: docker.io/postgres:15-alpine
     container_name: ssc-postgres
     environment:
@@ -24,6 +26,7 @@ services:
     restart: unless-stopped
 
   redis:
+    # Redis remains native-arch for simplicity and startup speed in the lab.
     image: docker.io/redis:7-alpine
     container_name: ssc-redis
     command: ["redis-server", "--appendonly", "yes"]
@@ -42,6 +45,9 @@ services:
     restart: unless-stopped
 
   raas:
+    # Broadcom supplies x86_64 RPMs, so the lab defaults to amd64 for builds
+    # and runtime on desktop hosts that are not already x86_64.
+    platform: ${SSC_IMAGE_PLATFORM:-linux/amd64}
     build:
       context: ../..
       dockerfile: images/Dockerfile.raas
@@ -60,17 +66,24 @@ services:
       POSTGRES_PASSWORD: raaspass
       REDIS_HOST: ssc-redis
       REDIS_PORT: "6379"
-      RAAS_PORT: "4507"
+      RAAS_PORT: "443"
     ports:
-      - "443:443"
+      # Preserve the appliance-style in-container listener while allowing the
+      # desktop host-side port to be overridden for local lab use.
+      - "${RAAS_HOST_PORT:-443}:443"
     networks:
       - ssc-net
     volumes:
+      # Keep config, certs, logs, and runtime data on separate host paths so it
+      # is easy to inspect or replace any one layer during troubleshooting.
       - ../config/raas:/etc/raas:Z,U
+      - ../config/raas/certs:/etc/pki/raas/certs:Z,U
       - ../logs/raas:/var/log/raas:Z,U
       - ../data/raas:/var/lib/raas:Z,U
       - ../tmp/raas:/var/cache/raas:Z,U
     healthcheck:
+      # Probe the TLS listener directly instead of a UI route so readiness stays
+      # stable even if optional UI components are absent.
       test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',443)); s.close()"]
       interval: 30s
       timeout: 5s
@@ -79,6 +92,9 @@ services:
     restart: unless-stopped
 
   salt-master:
+    # Match the RaaS image platform choice so the full stack behaves the same
+    # whether started from the split files or the combined lab compose.
+    platform: ${SSC_IMAGE_PLATFORM:-linux/amd64}
     build:
       context: ../..
       dockerfile: images/Dockerfile.salt-master
@@ -88,6 +104,8 @@ services:
       raas:
         condition: service_healthy
     environment:
+      # Use the same HTTPS endpoint and disabled cert validation that the lab
+      # uses while self-signed RaaS certs are in place.
       SALT_MASTER_ID: saltmaster1
       RAAS_HOST: ssc-raas
       RAAS_PORT: "443"
@@ -119,4 +137,6 @@ services:
 
 networks:
   ssc-net:
-    external: true
+    # Use a stable network name so either the combined compose file or the
+    # split compose files can create and reuse the same local lab network.
+    name: ssc-net

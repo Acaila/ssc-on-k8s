@@ -37,8 +37,8 @@ RUN set -eux; \
       /tmp/rpms/deps/libsodium-*.rpm \
       /tmp/rpms/deps/libtool-ltdl-*.rpm \
       /tmp/rpms/deps/libxslt-*.rpm \
-      /tmp/rpms/deps/xmlsec1-*.rpm \
       /tmp/rpms/deps/xmlsec1-openssl-*.rpm \
+      /tmp/rpms/deps/xmlsec1-[0-9]*.rpm \
       /tmp/rpms/raas/*.rpm; \
     rm -rf /tmp/rpms /tmp/keys; \
     /usr/sbin/ldconfig || true
@@ -77,7 +77,7 @@ USER raas
 VOLUME ["/etc/raas", "/var/log/raas", "/var/lib/raas", "/var/cache/raas"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=10 \
-  CMD /opt/saltstack/raas/bin/python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',4507)); s.close()"
+  CMD /opt/saltstack/raas/bin/python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',443)); s.close()"
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/opt/saltstack/raas/scripts/raas", "-c", "/etc/raas"]

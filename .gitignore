@@ -1,3 +1,6 @@
+# --- OS/editor noise ---
+.DS_Store
+
 # --- Artifact payloads (local only) ---
 artifacts-image/deployment.d/*
 artifacts-image/cloud.deploy.d/*
@@ -10,6 +13,12 @@ keys/*
 # allow placeholder files so directories exist in repo
 !rpms/.gitkeep
 !keys/.gitkeep
+!keys/README.md
+!rpms/README.md
+!rpms/raas/
+!rpms/raas/README.md
+!rpms/deps/
+!rpms/deps/README.md
 
 # --- Secrets / certificates ---
 *.crt
@@ -55,6 +64,8 @@ lab/config/salt/pki/master/minions_autosign/
 !lab/config/
 !lab/config/raas/
 !lab/config/raas/raas
+!lab/config/raas/certs/
+!lab/config/raas/certs/README.md
 !lab/config/salt/
 !lab/config/salt/master
 !lab/config/salt/master.d/
@@ -63,9 +74,21 @@ lab/config/salt/pki/master/minions_autosign/
 !lab/docs/*.md
 
 # --- New staged bundle locations ---
+bundle/sse-installer/
 bundle/rpms/*
 bundle/whl/*
+!bundle/README.md
 !bundle/rpms/
 !bundle/rpms/raas/
 !bundle/rpms/deps/
 !bundle/whl/
+!bundle/whl/README.md
+
+# --- Generated bundle outputs ---
+bundle/whl/*
+!bundle/whl/README.md
+
+# --- Generated lab runtime config ---
+lab/config/salt/master.d/eAPIMasterPaths.conf
+lab/config/salt/pki/**
+!lab/config/salt/pki/

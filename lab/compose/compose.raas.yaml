@@ -2,12 +2,16 @@ version: "3.9"
 
 services:
   raas:
+    # Broadcom ships x86_64 RPMs, so default the lab image build/run to amd64.
+    platform: ${SSC_IMAGE_PLATFORM:-linux/amd64}
     build:
       context: ../..
       dockerfile: images/Dockerfile.raas
     image: localhost/ssc-raas:8.18.3
     container_name: ssc-raas
     environment:
+      # Service names here match the shared compose network and are also what
+      # the entrypoint stamps into the templated RaaS config on first boot.
       POSTGRES_HOST: ssc-postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: raas
@@ -15,17 +19,24 @@ services:
       POSTGRES_PASSWORD: raaspass
       REDIS_HOST: ssc-redis
       REDIS_PORT: "6379"
-      RAAS_PORT: "4507"
+      RAAS_PORT: "443"
     ports:
-      - "443:443"
+      # Keep RaaS on 443 in-container, but allow the desktop host-side port to
+      # move if 443 is already occupied by another local service.
+      - "${RAAS_HOST_PORT:-443}:443"
     networks:
       - ssc-net
     volumes:
-      - ../config/raas:/etc/raas:Z
-      - ../logs/raas:/var/log/raas:Z
-      - ../data/raas:/var/lib/raas:Z
-      - ../tmp/raas:/var/cache/raas:Z
+      # Split mutable config, certs, logs, and cache/data so they can be
+      # inspected or mounted independently during lab work.
+      - ../config/raas:/etc/raas:Z,U
+      - ../config/raas/certs:/etc/pki/raas/certs:Z,U
+      - ../logs/raas:/var/log/raas:Z,U
+      - ../data/raas:/var/lib/raas:Z,U
+      - ../tmp/raas:/var/cache/raas:Z,U
     healthcheck:
+      # Probe the local HTTPS listener directly; this catches regressions back
+      # to cleartext 4507 while staying independent of the browser UI.
       test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',443)); s.close()"]
       interval: 30s
       timeout: 5s
@@ -35,4 +46,6 @@ services:
 
 networks:
   ssc-net:
-    external: true
+    # Give the lab network a fixed name so this file can create it if needed
+    # and still attach cleanly to the same network as the other split files.
+    name: ssc-net

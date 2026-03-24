@@ -10,7 +10,9 @@ sql:
 redis:
   url: redis://@@REDIS_HOST@@:@@REDIS_PORT@@
 
-port: 4507
+port: 443
+tls_crt: /etc/pki/raas/certs/localhost.crt
+tls_key: /etc/pki/raas/certs/localhost.key
 
 background_workers:
   combined_process: true
@@ -71,6 +73,9 @@ login_banner:
   enabled: false
   style: info
   message: ''
+
+vip:
+  vip_url: ''
 
 target_groups_from_master_only: false
 

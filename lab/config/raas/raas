@@ -2,15 +2,17 @@ customer_id: "a6a6ac52-84b7-4aea-b3e8-7479032a88bc"
 
 sql:
   dialect: postgresql
-  host: postgres
+  host: ssc-postgres
   port: 5432
   driver: psycopg2
   ssl: false
 
 redis:
-  url: redis://redis:6379
+  url: redis://ssc-redis:6379
 
-port: 4507
+port: 443
+tls_crt: /etc/pki/raas/certs/localhost.crt
+tls_key: /etc/pki/raas/certs/localhost.key
 
 background_workers:
   combined_process: true
@@ -71,6 +73,9 @@ login_banner:
   enabled: false
   style: info
   message: ''
+
+vip:
+  vip_url: ''
 
 target_groups_from_master_only: false
 

@@ -1,3 +1,4 @@
+# Placeholder only.
 apiVersion: v1
 kind: Service
 metadata:
@@ -5,8 +6,9 @@ metadata:
   namespace: aria-config
 spec:
   selector: { app: salt-master }
-  type: LoadBalancer
-  externalTrafficPolicy: Local
+  # Keep this as an internal service stub for now. The eventual external
+  # exposure model for minion traffic still needs to be validated in Kubernetes.
+  type: ClusterIP
   ports:
     - name: tcp-publisher
       port: 4505

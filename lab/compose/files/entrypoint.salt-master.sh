@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# These defaults match the lab topology. The same entrypoint can be reused with
+# different values in Kubernetes by overriding the environment variables.
 SALT_MASTER_ID="${SALT_MASTER_ID:-saltmaster1}"
 RAAS_HOST="${RAAS_HOST:-ssc-raas}"
-RAAS_PORT="${RAAS_PORT:-4507}"
-RAAS_SCHEME="${RAAS_SCHEME:-http}"
+RAAS_PORT="${RAAS_PORT:-443}"
+RAAS_SCHEME="${RAAS_SCHEME:-https}"
 EAPI_CLUSTER_ID="${EAPI_CLUSTER_ID:-salt}"
 EAPI_FAILOVER_MASTER="${EAPI_FAILOVER_MASTER:-False}"
 EAPI_SSL_VALIDATION="${EAPI_SSL_VALIDATION:-False}"
@@ -12,10 +14,14 @@ EAPI_SSL_VALIDATION="${EAPI_SSL_VALIDATION:-False}"
 mkdir -p /etc/salt/master.d
 mkdir -p /etc/salt/pki/master
 
+# SSEAPE installs into Salt's Python environment, so resolve its actual site-
+# packages path at runtime instead of assuming a distro-specific location.
 EGG_PATH="$(
   /opt/saltstack/salt/bin/python3 -c 'import site; print(site.getsitepackages()[0])'
 )"
 
+# Rebuild the external module path file on every start so the container stays
+# consistent even if the wheel version or Python path changes between builds.
 cat > /etc/salt/master.d/eAPIMasterPaths.conf <<EOF
 # Engines External Modules Path(s)
 engines_dirs:
@@ -54,6 +60,9 @@ states_dirs:
 - ${EGG_PATH}/sseape/states
 EOF
 
+# Render the master-to-RaaS integration config from environment so the same
+# image works in the lab and in a cluster without baking endpoints into the
+# image filesystem.
 cat > /etc/salt/master.d/raas.conf <<EOF
 # Set ID to override default name for this master that will display in the UI
 id: ${SALT_MASTER_ID}

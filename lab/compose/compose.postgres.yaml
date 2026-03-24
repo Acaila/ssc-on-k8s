@@ -2,6 +2,8 @@ version: "3.9"
 
 services:
   postgres:
+    # Postgres is left native-arch on purpose; only the Broadcom-based images
+    # need explicit amd64 handling on non-x86 desktop hosts.
     image: docker.io/postgres:15-alpine
     container_name: ssc-postgres
     environment:
@@ -14,6 +16,8 @@ services:
     networks:
       - ssc-net
     volumes:
+      # Persist the database across container recreation so RaaS state survives
+      # image rebuilds and lab restarts.
       - ../data/postgres:/var/lib/postgresql/data:Z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U raas -d raas"]
@@ -25,4 +29,6 @@ services:
 
 networks:
   ssc-net:
-    external: true
+    # Use the same explicit network name as the other compose files so Docker
+    # Compose can create it on first use and reuse it across split bring-up.
+    name: ssc-net
