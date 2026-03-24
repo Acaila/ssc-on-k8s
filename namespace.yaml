@@ -1,7 +1,6 @@
-# Placeholder only.
-# This namespace manifest reflects the intended target namespace for later
-# Kubernetes work, but the repo's validated workflow today is image building
-# and local Docker-based testing.
+# Namespace for the SSC Kubernetes validation stack.
+# Keep the scope narrow: validate the split services first, then harden and
+# expand the deployment model for broader platform use.
 apiVersion: v1
 kind: Namespace
 metadata:

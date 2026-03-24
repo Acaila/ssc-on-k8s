@@ -1,6 +1,6 @@
-# Placeholder only.
-# This manifest is design-direction reference material and is not part of a
-# validated Kubernetes deployment bundle yet.
+# Redis backing service for SSC.
+# Keep this isolated as an internal service so RaaS and related workers can use
+# it without exposing Redis outside the cluster boundary.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,21 +12,32 @@ spec:
   template:
     metadata:
       labels: { app: redis }
-      annotations:
-        container.apparmor.security.beta.kubernetes.io/redis: runtime/default
     spec:
       securityContext:
         seccompProfile: { type: RuntimeDefault }
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
       containers:
         - name: redis
-          image: redis:7-alpine
-          args: ["--appendonly", "yes"]
+          image: docker.io/redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["redis-server", "--appendonly", "yes"]
           ports: [{ containerPort: 6379 }]
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
           resources:
             requests:
               cpu: 100m
@@ -37,7 +48,7 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-        volumes:
-          - name: data
-            persistentVolumeClaim:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
             claimName: redis-pvc

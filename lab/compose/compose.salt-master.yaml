@@ -17,7 +17,7 @@ services:
       RAAS_HOST: ssc-raas
       RAAS_PORT: "443"
       RAAS_SCHEME: https
-      EAPI_CLUSTER_ID: salt
+      EAPI_CLUSTER_ID: ${EAPI_CLUSTER_ID:-}
       EAPI_FAILOVER_MASTER: "False"
       EAPI_SSL_VALIDATION: "False"
     ports:

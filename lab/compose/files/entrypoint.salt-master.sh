@@ -7,12 +7,38 @@ SALT_MASTER_ID="${SALT_MASTER_ID:-saltmaster1}"
 RAAS_HOST="${RAAS_HOST:-ssc-raas}"
 RAAS_PORT="${RAAS_PORT:-443}"
 RAAS_SCHEME="${RAAS_SCHEME:-https}"
-EAPI_CLUSTER_ID="${EAPI_CLUSTER_ID:-salt}"
+EAPI_CLUSTER_ID="${EAPI_CLUSTER_ID:-}"
+EAPI_CLUSTER_ID_FILE="${EAPI_CLUSTER_ID_FILE:-/etc/salt/master.d/.cluster_id}"
 EAPI_FAILOVER_MASTER="${EAPI_FAILOVER_MASTER:-False}"
 EAPI_SSL_VALIDATION="${EAPI_SSL_VALIDATION:-False}"
 
 mkdir -p /etc/salt/master.d
 mkdir -p /etc/salt/pki/master
+mkdir -p "$(dirname "${EAPI_CLUSTER_ID_FILE}")"
+
+generate_uuid() {
+  /opt/saltstack/salt/bin/python3 - <<'PY'
+import uuid
+print(uuid.uuid4())
+PY
+}
+
+# Keep the SSE cluster ID stable for a given deployment unless the operator
+# overrides it. This avoids multiple installs of the repo all registering to
+# RaaS with the same default cluster identifier.
+if [ -n "${EAPI_CLUSTER_ID}" ]; then
+  cluster_id="${EAPI_CLUSTER_ID}"
+elif [ -s "${EAPI_CLUSTER_ID_FILE}" ]; then
+  cluster_id="$(tr -d '\r\n' < "${EAPI_CLUSTER_ID_FILE}")"
+else
+  cluster_id="$(generate_uuid)"
+fi
+
+if [ ! -s "${EAPI_CLUSTER_ID_FILE}" ] || [ "$(tr -d '\r\n' < "${EAPI_CLUSTER_ID_FILE}" 2>/dev/null || true)" != "${cluster_id}" ]; then
+  echo "${cluster_id}" > "${EAPI_CLUSTER_ID_FILE}"
+fi
+
+chmod 600 "${EAPI_CLUSTER_ID_FILE}" 2>/dev/null || true
 
 # SSEAPE installs into Salt's Python environment, so resolve its actual site-
 # packages path at runtime instead of assuming a distro-specific location.
@@ -68,7 +94,7 @@ cat > /etc/salt/master.d/raas.conf <<EOF
 id: ${SALT_MASTER_ID}
 
 # Set the cluster ID that this Salt Master belongs to
-sseapi_cluster_id: ${EAPI_CLUSTER_ID}
+sseapi_cluster_id: ${cluster_id}
 
 # Set if multiple masters configurations are "active" or "failover"
 sseapi_failover_master: ${EAPI_FAILOVER_MASTER}

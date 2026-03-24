@@ -1,4 +1,6 @@
-# Placeholder only.
+# RaaS persistence PVC.
+# This claim is reserved for deployment identity and key data that must survive
+# a pod restart, rather than for the whole RaaS runtime tree.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

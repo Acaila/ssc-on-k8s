@@ -1,4 +1,6 @@
-# Placeholder only.
+# Salt master PVC for master-specific state.
+# Reserve this claim for master-local state that should follow a given master
+# instance, not for shared minion trust material.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

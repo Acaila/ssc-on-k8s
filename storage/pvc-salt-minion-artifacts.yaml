@@ -1,8 +1,14 @@
-# Placeholder only.
+# Dedicated PVC for minion key state.
+# Keep accepted, pending, denied, rejected, and autosign trust material
+# separate from master-specific identity and RaaS authentication data so a
+# master can be replaced without also replacing the minion trust database.
+# If a future scale-out design needs multiple masters to reference the same
+# trust state, this claim is the boundary to revisit with storage that supports
+# the required shared-access semantics on the target Kubernetes platform.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: salt-minion-artifacts-pvc
+  name: salt-minion-keys-pvc
   namespace: aria-config
 spec:
   accessModes: ["ReadWriteOnce"]

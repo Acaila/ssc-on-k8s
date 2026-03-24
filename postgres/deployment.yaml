@@ -1,6 +1,6 @@
-# Placeholder only.
-# This manifest is design-direction reference material and is not part of a
-# validated Kubernetes deployment bundle yet.
+# PostgreSQL backing service for SSC.
+# This stays intentionally simple: one database instance, one PVC, and a
+# security context that is close to a baseline hardened cluster profile.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,44 +12,56 @@ spec:
   template:
     metadata:
       labels: { app: postgres }
-      annotations:
-        container.apparmor.security.beta.kubernetes.io/postgres: runtime/default
-  spec:
-    securityContext:
-      seccompProfile: { type: RuntimeDefault }
-      fsGroup: 999
-      fsGroupChangePolicy: OnRootMismatch
-    containers:
-      - name: postgres
-        image: postgres:15-alpine
-        env:
-          - name: POSTGRES_DB
-            valueFrom: { secretKeyRef: { name: ssc-db, key: name } }
-          - name: POSTGRES_USER
-            valueFrom: { secretKeyRef: { name: ssc-db, key: user } }
-          - name: POSTGRES_PASSWORD
-            valueFrom: { secretKeyRef: { name: ssc-db, key: password } }
-        ports: [{ containerPort: 5432 }]
-        securityContext:
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities: { drop: ["ALL"] }
-        resources:
-          requests:
-            cpu: 100m
-            memory: 256Mi
-          limits:
-            cpu: 1
-            memory: 1Gi
-        volumeMounts:
-          - name: data
-            mountPath: /var/lib/postgresql/data
-          - name: run
-            mountPath: /var/run/postgresql
-    volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: postgres-pvc
-      - name: run
-        emptyDir: {}
+    spec:
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        runAsUser: 999
+        runAsGroup: 999
+      containers:
+        - name: postgres
+          image: docker.io/postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              valueFrom: { secretKeyRef: { name: ssc-db, key: name } }
+            - name: POSTGRES_USER
+              valueFrom: { secretKeyRef: { name: ssc-db, key: user } }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: ssc-db, key: password } }
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports: [{ containerPort: 5432 }]
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: run
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: run
+          emptyDir: {}

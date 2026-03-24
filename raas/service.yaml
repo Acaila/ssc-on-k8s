@@ -1,4 +1,6 @@
-# Placeholder only.
+# External service for the RaaS UI and API.
+# The service shape is kept generic for Kubernetes platforms that can publish a
+# real external endpoint while still fitting local cluster validation flows.
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,8 +8,8 @@ metadata:
   namespace: aria-config
 spec:
   selector: { app: raas }
+  type: LoadBalancer
   ports:
     - name: api
       port: 443
       targetPort: 443
-  type: ClusterIP

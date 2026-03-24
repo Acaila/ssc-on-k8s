@@ -228,6 +228,23 @@ https://localhost:8443
 
 The lab defaults to a self-signed certificate if no cert/key pair is mounted, so a browser warning is expected on first access.
 
+On first start, the checked-in templates also generate deployment-local
+identity values unless you override them:
+
+- RaaS stamps a unique `customer_id` into its config
+- salt-master generates a unique `sseapi_cluster_id`
+
+For compose-based local runs, those generated values persist in the mounted
+config paths unless you replace them with explicit environment overrides.
+
+For the currently validated first login to the RaaS UI, use the Broadcom
+default credentials:
+
+- username: `root`
+- password: `salt`
+
+For any non-lab deployment, change that password immediately after first login.
+
 After RaaS is healthy, you can start the salt-master:
 
 ```bash

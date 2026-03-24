@@ -1,6 +1,7 @@
-# Placeholder only.
-# The Kubernetes manifests in this repo are design-direction artifacts and are
-# not yet maintained as a validated end-to-end deployment bundle.
+# Entry-point kustomization kept intentionally narrow.
+# The repo now has a validated Minikube deployment workflow, but the manifests
+# are not yet maintained as a single generic end-to-end kustomize bundle across
+# all target platforms.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: aria-config
@@ -8,5 +9,5 @@ resources:
   - namespace.yaml
 
 # The remaining manifests are intentionally left out of the default kustomize
-# bundle until the Kubernetes deployment path has been validated end to end.
-# Keep them as reference material only for now.
+# bundle until the broader Kubernetes packaging story is made consistent across
+# the supported platform guides.

@@ -70,8 +70,6 @@ lab/config/salt/pki/master/minions_autosign/
 !lab/config/salt/master
 !lab/config/salt/master.d/
 !lab/config/salt/pillar/
-!lab/docs/
-!lab/docs/*.md
 
 # --- New staged bundle locations ---
 bundle/sse-installer/

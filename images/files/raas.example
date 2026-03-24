@@ -1,4 +1,4 @@
-customer_id: "a6a6ac52-84b7-4aea-b3e8-7479032a88bc"
+customer_id: "@@CUSTOMER_ID@@"
 
 sql:
   dialect: postgresql

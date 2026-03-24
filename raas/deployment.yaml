@@ -1,6 +1,7 @@
-# Placeholder only.
-# This manifest is not currently validated. The working implementation today is
-# the Docker image and local compose-based lab path.
+# RaaS deployment for Kubernetes validation.
+# Keep runtime state ephemeral where possible, but persist the deployment
+# identity and encryption key so a replacement pod does not orphan the
+# database it already initialized.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,25 +9,52 @@ metadata:
   namespace: aria-config
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector: { matchLabels: { app: raas } }
   template:
     metadata:
       labels: { app: raas }
-      annotations:
-        container.apparmor.security.beta.kubernetes.io/raas: runtime/default
     spec:
       securityContext:
         seccompProfile: { type: RuntimeDefault }
-        fsGroup: 10001
+        fsGroup: 999
         fsGroupChangePolicy: OnRootMismatch
+        runAsUser: 999
+        runAsGroup: 999
+      initContainers:
+        - name: raas-storage-root
+          # Reuse the validated RaaS image for init work so the deployment does
+          # not depend on pulling an extra utility image at runtime.
+          image: localhost/ssc-raas:8.18.3
+          imagePullPolicy: Never
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # Prepare only the dedicated identity/key path on the PVC. Keep
+              # the rest of the RaaS runtime tree ephemeral so restarts do not
+              # inherit stale cache or pid state.
+              mkdir -p /persist/raas-state
+              chmod 0777 /persist/raas-state
+          volumeMounts:
+            - name: persist-raas
+              mountPath: /persist
       containers:
         - name: raas
-          image: registry.example.com/ssc/ssc-raas:8.18.3
+          image: localhost/ssc-raas:8.18.3
+          imagePullPolicy: Never
           ports:
             - containerPort: 443
           env:
             - name: RAAS_DB_HOST
-              valueFrom: { secretKeyRef: { name: ssc-db, key: host } }
+              value: postgres
             - name: RAAS_DB_NAME
               valueFrom: { secretKeyRef: { name: ssc-db, key: name } }
             - name: RAAS_DB_USER
@@ -34,12 +62,20 @@ spec:
             - name: RAAS_DB_PASS
               valueFrom: { secretKeyRef: { name: ssc-db, key: password } }
             - name: RAAS_REDIS_HOST
-              valueFrom: { secretKeyRef: { name: ssc-redis, key: host } }
+              value: redis
             - name: RAAS_REDIS_PORT
-              valueFrom: { secretKeyRef: { name: ssc-redis, key: port } }
+              value: "6379"
+            - name: RAAS_PERSIST_KEY_PATH
+              value: /persist/raas-state/.raas.key
+            - name: RAAS_PERSIST_CUSTOMER_ID_PATH
+              value: /persist/raas-state/customer_id
+            - name: RAAS_CUSTOMER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ssc-bootstrap
+                  key: customer_id
+                  optional: true
           securityContext:
-            runAsUser: 10001
-            runAsGroup: 10001
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -47,29 +83,51 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 256Mi
+              memory: 1Gi
             limits:
               cpu: 1
-              memory: 1Gi
+              memory: 2Gi
           volumeMounts:
             - name: etc-raas
               mountPath: /etc/raas
+            - name: certs
+              mountPath: /etc/pki/raas/certs
             - name: log-raas
               mountPath: /var/log/raas
+            - name: lib-raas
+              mountPath: /var/lib/raas
+            - name: persist-raas
+              mountPath: /persist/raas-state
+              subPath: raas-state
+            - name: cache-raas
+              mountPath: /var/cache/raas
+            - name: run-raas
+              mountPath: /var/run/raas
             - name: tmp
               mountPath: /tmp
           readinessProbe:
             tcpSocket: { port: 443 }
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             tcpSocket: { port: 443 }
-            initialDelaySeconds: 30
+            initialDelaySeconds: 45
             periodSeconds: 20
-        volumes:
-          - name: etc-raas
-            persistentVolumeClaim: { claimName: raas-etc-pvc }
-          - name: log-raas
-            persistentVolumeClaim: { claimName: raas-logs-pvc }
-          - name: tmp
-            emptyDir: { medium: Memory }
+      volumes:
+        - name: etc-raas
+          emptyDir: {}
+        - name: certs
+          emptyDir: {}
+        - name: log-raas
+          emptyDir: {}
+        - name: lib-raas
+          emptyDir: {}
+        - name: persist-raas
+          persistentVolumeClaim:
+            claimName: raas-pvc
+        - name: cache-raas
+          emptyDir: {}
+        - name: run-raas
+          emptyDir: {}
+        - name: tmp
+          emptyDir: { medium: Memory }

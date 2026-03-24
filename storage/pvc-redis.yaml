@@ -1,4 +1,6 @@
-# Placeholder only.
+# Redis data PVC.
+# Keep Redis append-only data on its own claim so pod replacement does not wipe
+# queue and cache state unexpectedly.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

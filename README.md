@@ -18,12 +18,15 @@ What we have working today:
 - repeatable builds for the Broadcom-based `ssc-raas` and `ssc-salt-master` container images
 - helper scripts to stage the official Broadcom bundle and preflight the build environment
 - local Docker Compose validation for PostgreSQL, Redis, RaaS, and salt-master
+- a validated Docker Desktop Kubernetes deployment path for PostgreSQL, Redis, RaaS, and salt-master
+- a validated Minikube-on-macOS deployment path for PostgreSQL, Redis, RaaS, and salt-master
 - RaaS running on HTTPS `443` in-container, with self-signed certificate generation when no certificate is provided
 - support for overriding the host-side published RaaS port during local Docker testing
 
 What is not yet claimed as complete:
 
-- a finished or fully validated Kubernetes deployment
+- a finished TKG deployment
+- a uniformly validated Kubernetes deployment story across all target platforms
 - a complete replacement for the full Broadcom appliance behavior
 
 ## Build Workflow
@@ -31,6 +34,15 @@ What is not yet claimed as complete:
 The current source of truth for building the container images is:
 
 - [images/README.md](images/README.md)
+
+If you want the shortest validated local Kubernetes path from fresh clone to
+browser login, start with:
+
+- [QUICKSTART.md](QUICKSTART.md)
+
+The current source of truth for platform-specific runtime and deployment notes is:
+
+- [deployment/README.md](deployment/README.md)
 
 That guide covers:
 
@@ -48,9 +60,10 @@ If you are starting from a fresh clone, begin there.
 The repository is organized around a staged workflow:
 
 - `images/` contains the Dockerfiles, image assets, and the image build guide
+- `deployment/` contains platform-target runtime and deployment guides
 - `scripts/` contains the bundle staging, preflight, and image build helpers
 - `lab/compose/` contains the local Docker Compose files used to validate the containerized stack on a desktop or laptop
-- Kubernetes manifests in the repo represent ongoing work and design direction, but should not be read as a finished deployment story yet
+- Kubernetes manifests in the repo include a validated Minikube workflow plus ongoing design work for broader target platforms
 
 ## Known Gaps
 

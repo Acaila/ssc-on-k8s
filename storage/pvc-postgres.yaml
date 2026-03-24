@@ -1,4 +1,6 @@
-# Placeholder only.
+# PostgreSQL data PVC.
+# Database state is expected to survive pod replacement, so keep it on its own
+# claim instead of mixing it with other service state.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

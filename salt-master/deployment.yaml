@@ -1,6 +1,10 @@
-# Placeholder only.
-# This file is retained as a design stub while the validated workflow remains
-# focused on container image builds and local Docker validation.
+# Salt master deployment for Kubernetes validation.
+# The storage split in this manifest is intentional:
+# - master-config is regenerated on each start by the entrypoint
+# - master-pki holds master-specific identity and SSE/RaaS auth material
+# - master-state holds master-local generated values such as cluster identity
+# - minion-keys isolates accepted/pending/rejected minion trust state from the
+#   master's own identity so the trust database can evolve independently
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,20 +16,125 @@ spec:
   template:
     metadata:
       labels: { app: salt-master }
-        annotations:
-          container.apparmor.security.beta.kubernetes.io/salt-master: runtime/default
     spec:
       securityContext:
         seccompProfile: { type: RuntimeDefault }
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
+      initContainers:
+        - name: salt-permissions
+          # Reuse the validated salt-master image for init work so the
+          # deployment does not depend on pulling an extra utility image at
+          # runtime.
+          image: localhost/ssc-salt-master:3006-lts
+          imagePullPolicy: Never
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # Prepare both the master-local PKI tree and the separate minion
+              # trust-state mount points before Salt starts as the non-root
+              # packaged service user.
+              mkdir -p \
+                /etc/salt/master.d \
+                /etc/salt/pki/master \
+                /etc/salt/pki/master/minions \
+                /etc/salt/pki/master/minions_autosign \
+                /etc/salt/pki/master/minions_denied \
+                /etc/salt/pki/master/minions_pre \
+                /etc/salt/pki/master/minions_rejected \
+                /var/lib/ssc-salt-master \
+                /opt/saltstack/salt/.local \
+                /srv/salt \
+                /var/cache/salt \
+                /var/log/salt \
+                /var/run/salt \
+                /tmp
+              mkdir -p \
+                /persist/minions \
+                /persist/minions_autosign \
+                /persist/minions_denied \
+                /persist/minions_pre \
+                /persist/minions_rejected
+              chown -R 999:999 \
+                /etc/salt/master.d \
+                /etc/salt/pki \
+                /var/lib/ssc-salt-master \
+                /opt/saltstack/salt/.local \
+                /srv/salt \
+                /var/cache/salt \
+                /var/log/salt \
+                /var/run/salt \
+                /tmp
+              chmod 0755 /etc/salt/pki
+              chmod 0755 /etc/salt/pki/master
+              # The dedicated minion-key claim is only for trust-state
+              # directories. Leave it writable so future master replacements
+              # can reuse the same accepted/pending/rejected key database.
+              chmod 0777 \
+                /persist/minions \
+                /persist/minions_autosign \
+                /persist/minions_denied \
+                /persist/minions_pre \
+                /persist/minions_rejected
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: master-config
+              mountPath: /etc/salt/master.d
+            - name: master-pki
+              mountPath: /etc/salt/pki
+            - name: relenv-local
+              mountPath: /opt/saltstack/salt/.local
+            - name: master-state
+              mountPath: /var/lib/ssc-salt-master
+            - name: minion-keys
+              mountPath: /persist
+            - name: srv-salt
+              mountPath: /srv/salt
+            - name: cache
+              mountPath: /var/cache/salt
+            - name: logs
+              mountPath: /var/log/salt
+            - name: run
+              mountPath: /var/run/salt
+            - name: tmp
+              mountPath: /tmp
       containers:
         - name: salt-master
-          image: docker.io/saltstack/salt:3007
-          command: ["/usr/bin/dumb-init", "--"]
-          args: ["salt-master", "-l", "info"]
+          image: localhost/ssc-salt-master:3006-lts
+          imagePullPolicy: Never
+          env:
+            - name: SALT_MASTER_ID
+              value: saltmaster1
+            - name: RAAS_HOST
+              value: raas
+            - name: RAAS_PORT
+              value: "443"
+            - name: RAAS_SCHEME
+              value: https
+            - name: EAPI_CLUSTER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ssc-bootstrap
+                  key: cluster_id
+                  optional: true
+            - name: EAPI_CLUSTER_ID_FILE
+              value: /var/lib/ssc-salt-master/cluster_id
+            - name: EAPI_FAILOVER_MASTER
+              value: "False"
+            - name: EAPI_SSL_VALIDATION
+              value: "False"
           ports:
             - containerPort: 4505
             - containerPort: 4506
           securityContext:
+            runAsUser: 999
+            runAsGroup: 999
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -38,8 +147,34 @@ spec:
               cpu: 1
               memory: 1Gi
           volumeMounts:
-            - name: etc-salt
-              mountPath: /etc/salt
+            - name: master-config
+              mountPath: /etc/salt/master.d
+            # Keep the master's own PKI, including SSE/RaaS auth material,
+            # separate from the dedicated minion trust-state claim.
+            - name: master-pki
+              mountPath: /etc/salt/pki
+            # Bind the minion trust-state directories individually so they can
+            # live on their own claim without forcing the whole PKI tree to be
+            # shared with other master-specific material.
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions
+              subPath: minions
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_autosign
+              subPath: minions_autosign
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_denied
+              subPath: minions_denied
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_pre
+              subPath: minions_pre
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_rejected
+              subPath: minions_rejected
+            - name: relenv-local
+              mountPath: /opt/saltstack/salt/.local
+            - name: master-state
+              mountPath: /var/lib/ssc-salt-master
             - name: srv-salt
               mountPath: /srv/salt
             - name: cache
@@ -48,55 +183,36 @@ spec:
               mountPath: /var/log/salt
             - name: run
               mountPath: /var/run/salt
-            - name: minion-artifacts
-              mountPath: /etc/salt/deployment.d
-              subPath: deployment.d
-            - name: minion-artifacts
-              mountPath: /etc/salt/cloud.deploy.d
-              subPath: cloud.deploy.d
-            - name: minion-artifacts
-              mountPath: /etc/salt/cloud.profiles.d
-              subPath: cloud.profiles.d
+            - name: tmp
+              mountPath: /tmp
           readinessProbe:
             tcpSocket: { port: 4506 }
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
           livenessProbe:
             tcpSocket: { port: 4505 }
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
             periodSeconds: 20
-        volumes:
-          - name: etc-salt
-            persistentVolumeClaim:
-              claimName: salt-master-pvc
-          - name: srv-salt
-            persistentVolumeClaim: 
-              claimName: salt-master-pvc
-          - name: cache
-            emptyDir: {}
-          - name: logs
-            emptyDir: {}
-          - name: run
-            emptyDir: {}
-          - name: minion-artifacts
-            persistentVolumeClaim:
-              claimName: salt-minion-artifacts-pvc
-      initContainers:
-        - name: seed-minion-artifacts
-          image: registry.example.com/ssc/minion-artifacts:1.0   # <— override via kustomize
-          command: ["/bin/sh","-c"]
-          args:
-            - |
-              set -e
-              mkdir -p /out/deployment.d /out/cloud.deploy.d /out/cloud.profiles.d
-              cp -a /payload/deployment.d/* /out/deployment.d/ 2>/dev/null || true
-              cp -a /payload/cloud.deploy.d/* /out/cloud.deploy.d/ 2>/dev/null || true
-              cp -a /payload/cloud.profiles.d/* /out/cloud.profiles.d/ 2>/dev/null || true
-          securityContext:
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities: { drop: ["ALL"] }
-          volumeMounts:
-            - name: minion-artifacts
-              mountPath: /out
+      volumes:
+        - name: master-config
+          emptyDir: {}
+        - name: master-pki
+          emptyDir: {}
+        - name: minion-keys
+          persistentVolumeClaim:
+            claimName: salt-minion-keys-pvc
+        - name: master-state
+          persistentVolumeClaim:
+            claimName: salt-master-pvc
+        - name: relenv-local
+          emptyDir: {}
+        - name: srv-salt
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
