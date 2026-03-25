@@ -261,7 +261,7 @@ Expected result:
 
 The current manifest intentionally separates:
 
-- master-local PKI/auth state
+- master-local PKI/auth state and generated master-local values
 - minion trust-state directories
 
 The accepted and pending minion key directories live under:
@@ -275,7 +275,8 @@ The accepted and pending minion key directories live under:
 ```
 
 In the current manifest, those paths are mounted from a dedicated PVC so they
-are not coupled to the master's own identity material.
+are not coupled to the master's own identity material, which now persists on
+the master-local PVC across redeploys.
 
 The scale-out/shared-master implications of that split are noted in:
 

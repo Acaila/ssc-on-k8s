@@ -1,8 +1,8 @@
 # Salt master deployment for Kubernetes validation.
 # The storage split in this manifest is intentional:
 # - master-config is regenerated on each start by the entrypoint
-# - master-pki holds master-specific identity and SSE/RaaS auth material
-# - master-state holds master-local generated values such as cluster identity
+# - master-persist holds master-specific identity, SSE/RaaS auth material, and
+#   generated values such as cluster identity
 # - minion-keys isolates accepted/pending/rejected minion trust state from the
 #   master's own identity so the trust database can evolve independently
 apiVersion: apps/v1
@@ -38,7 +38,9 @@ spec:
               # Kubernetes those image-owned directories are hidden by mounted
               # volumes, so only create the nested paths that must exist
               # inside those mounts before the non-root entrypoint starts.
-              mkdir -p /etc/salt/pki/master
+              mkdir -p \
+                /persist-master/master-pki/master \
+                /persist-master/master-state
               mkdir -p \
                 /persist/minions \
                 /persist/minions_autosign \
@@ -47,16 +49,17 @@ spec:
                 /persist/minions_rejected
               chown -R 999:999 \
                 /etc/salt/master.d \
-                /etc/salt/pki \
-                /var/lib/ssc-salt-master \
                 /opt/saltstack/salt/.local \
                 /srv/salt \
                 /var/cache/salt \
                 /var/log/salt \
                 /var/run/salt \
                 /tmp
-              chmod 0755 /etc/salt/pki
-              chmod 0755 /etc/salt/pki/master
+              chown -R 999:999 \
+                /persist-master/master-pki \
+                /persist-master/master-state
+              chmod 0755 /persist-master/master-pki
+              chmod 0755 /persist-master/master-pki/master
               # The dedicated minion-key claim is only for trust-state
               # directories. Leave it writable so future master replacements
               # can reuse the same accepted/pending/rejected key database.
@@ -73,12 +76,10 @@ spec:
           volumeMounts:
             - name: master-config
               mountPath: /etc/salt/master.d
-            - name: master-pki
-              mountPath: /etc/salt/pki
+            - name: master-persist
+              mountPath: /persist-master
             - name: relenv-local
               mountPath: /opt/saltstack/salt/.local
-            - name: master-state
-              mountPath: /var/lib/ssc-salt-master
             - name: minion-keys
               mountPath: /persist
             - name: srv-salt
@@ -137,9 +138,16 @@ spec:
             - name: master-config
               mountPath: /etc/salt/master.d
             # Keep the master's own PKI, including SSE/RaaS auth material,
-            # separate from the dedicated minion trust-state claim.
-            - name: master-pki
+            # on the master-local PVC so a redeploy can reuse the same master
+            # identity and RaaS trust relationship.
+            - name: master-persist
               mountPath: /etc/salt/pki
+              subPath: master-pki
+            # Keep generated master-local values on the same PVC as the master
+            # PKI so both move together during a replacement.
+            - name: master-persist
+              mountPath: /var/lib/ssc-salt-master
+              subPath: master-state
             # Bind the minion trust-state directories individually so they can
             # live on their own claim without forcing the whole PKI tree to be
             # shared with other master-specific material.
@@ -160,8 +168,6 @@ spec:
               subPath: minions_rejected
             - name: relenv-local
               mountPath: /opt/saltstack/salt/.local
-            - name: master-state
-              mountPath: /var/lib/ssc-salt-master
             - name: srv-salt
               mountPath: /srv/salt
             - name: cache
@@ -183,12 +189,10 @@ spec:
       volumes:
         - name: master-config
           emptyDir: {}
-        - name: master-pki
-          emptyDir: {}
         - name: minion-keys
           persistentVolumeClaim:
             claimName: salt-minion-keys-pvc
-        - name: master-state
+        - name: master-persist
           persistentVolumeClaim:
             claimName: salt-master-pvc
         - name: relenv-local
