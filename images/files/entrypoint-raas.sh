@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# RaaS expects its config, logs, and TLS material to exist on persistent paths.
-# In the lab these paths may be mounted from the host, but they still need to
-# exist for first boot and for image-local testing.
-mkdir -p /etc/raas /etc/raas/pki /var/log/raas /etc/pki/raas/certs /var/lib/raas
+RAAS_KEY_FILE="/etc/raas/pki/.raas.key"
+RAAS_PERSIST_KEY_PATH="${RAAS_PERSIST_KEY_PATH:-/var/lib/raas/.raas.key}"
+RAAS_PERSIST_CUSTOMER_ID_PATH="${RAAS_PERSIST_CUSTOMER_ID_PATH:-/etc/raas/customer_id}"
+
+# Keep runtime setup focused on nested writable paths. The image already owns
+# the top-level RaaS directories, while Kubernetes and Compose replace those
+# roots with mounted volumes at runtime.
+mkdir -p \
+  /etc/raas/pki \
+  /etc/pki/raas/certs \
+  "$(dirname "${RAAS_PERSIST_KEY_PATH}")" \
+  "$(dirname "${RAAS_PERSIST_CUSTOMER_ID_PATH}")"
 
 if [ ! -s /etc/raas/raas ]; then
   echo "[entrypoint] Seeding /etc/raas/raas from /bootstrap/raas"
@@ -20,9 +28,6 @@ sed -i "s#@@REDIS_PORT@@#${RAAS_REDIS_PORT:-6379}#g" /etc/raas/raas
 TLS_CRT="/etc/pki/raas/certs/localhost.crt"
 TLS_KEY="/etc/pki/raas/certs/localhost.key"
 TLS_CN="${RAAS_TLS_CN:-ssc-raas}"
-RAAS_KEY_FILE="/etc/raas/pki/.raas.key"
-RAAS_PERSIST_KEY_PATH="${RAAS_PERSIST_KEY_PATH:-/var/lib/raas/.raas.key}"
-RAAS_PERSIST_CUSTOMER_ID_PATH="${RAAS_PERSIST_CUSTOMER_ID_PATH:-/etc/raas/customer_id}"
 
 generate_uuid() {
   if [ -r /proc/sys/kernel/random/uuid ]; then

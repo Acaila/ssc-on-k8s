@@ -12,8 +12,9 @@ EAPI_CLUSTER_ID_FILE="${EAPI_CLUSTER_ID_FILE:-/etc/salt/master.d/.cluster_id}"
 EAPI_FAILOVER_MASTER="${EAPI_FAILOVER_MASTER:-False}"
 EAPI_SSL_VALIDATION="${EAPI_SSL_VALIDATION:-False}"
 
-mkdir -p /etc/salt/master.d
-mkdir -p /etc/salt/pki/master
+# Only ensure the writable parent of the persisted cluster ID exists. The
+# image provides the standard Salt tree, and Kubernetes/Compose mounts replace
+# those roots with their own volume-backed paths.
 mkdir -p "$(dirname "${EAPI_CLUSTER_ID_FILE}")"
 
 generate_uuid() {

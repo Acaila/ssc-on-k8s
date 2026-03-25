@@ -34,24 +34,11 @@ spec:
             - -c
             - |
               set -eu
-              # Prepare both the master-local PKI tree and the separate minion
-              # trust-state mount points before Salt starts as the non-root
-              # packaged service user.
-              mkdir -p \
-                /etc/salt/master.d \
-                /etc/salt/pki/master \
-                /etc/salt/pki/master/minions \
-                /etc/salt/pki/master/minions_autosign \
-                /etc/salt/pki/master/minions_denied \
-                /etc/salt/pki/master/minions_pre \
-                /etc/salt/pki/master/minions_rejected \
-                /var/lib/ssc-salt-master \
-                /opt/saltstack/salt/.local \
-                /srv/salt \
-                /var/cache/salt \
-                /var/log/salt \
-                /var/run/salt \
-                /tmp
+              # The image already ships the top-level Salt paths. In
+              # Kubernetes those image-owned directories are hidden by mounted
+              # volumes, so only create the nested paths that must exist
+              # inside those mounts before the non-root entrypoint starts.
+              mkdir -p /etc/salt/pki/master
               mkdir -p \
                 /persist/minions \
                 /persist/minions_autosign \

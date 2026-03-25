@@ -27,7 +27,9 @@ COPY bundle/whl/SSEAPE-8.18.3.6-py3-none-any.whl /tmp/whl/SSEAPE-8.18.3.6-py3-no
 COPY lab/compose/files/entrypoint.salt-master.sh /usr/local/bin/entrypoint.sh
 
 RUN set -eux; \
-    /opt/saltstack/salt/salt-pip install /tmp/whl/SSEAPE-8.18.3.6-py3-none-any.whl
+    /opt/saltstack/salt/salt-pip install \
+      /tmp/whl/SSEAPE-8.18.3.6-py3-none-any.whl \
+      pygit2
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
 

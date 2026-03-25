@@ -12,9 +12,38 @@ The repo currently builds these Broadcom-based images:
 - `localhost/ssc-salt-master:3006-lts`
 
 The RaaS image is built from the official Broadcom `raas` RPM and supporting RPMs.
-The salt-master image installs Salt 3006 LTS from the Salt Project repository and then adds the Broadcom `SSEAPE` plugin wheel.
+The salt-master image installs Salt 3006 LTS from the Salt Project repository and then adds the Broadcom `SSEAPE` plugin wheel plus `pygit2` through `salt-pip` for `gitfs` and `git_pillar` support.
 
 The separate air-gapped minion bundle can live in the top-level `bundle/` directory, but it is not used by the image build flow at this stage.
+
+## Image Boundary
+
+The images in this repo are expected to provide the baseline filesystem layout
+for their service.
+
+That means the Dockerfiles and image entrypoints should own things like:
+
+- standard application directories under `/etc`, `/var/lib`, `/var/log`, and `/var/run`
+- packaged runtime dependencies and Python modules
+- first-boot config rendering that targets the container's writable service paths
+
+This is intentional because it keeps the images usable in more than one runtime:
+
+- direct `docker run` smoke tests
+- the checked-in Docker Compose lab
+- Kubernetes deployments
+
+When a path is replaced by a mounted volume at runtime, the image content at
+that mount point is hidden by the container runtime. In those cases, the image
+still defines the expected layout, but the runtime platform is responsible for
+preparing the inside of the mounted filesystem.
+
+For operators with a Linux or vSphere background, the practical rule is:
+
+- build the image so it can boot cleanly on its own
+- treat mounted volumes like fresh filesystems that may need runtime prep
+- do not duplicate the whole directory tree in Kubernetes init containers just
+  because the image also creates it
 
 ## Prerequisites
 

@@ -83,7 +83,11 @@ bundle/sse-installer
 
 ## 5. Build The Local Images
 
-Stage the Broadcom artifacts and build the images:
+Stage the Broadcom artifacts and build the images.
+
+The build wrappers already run the same preflight checks automatically, so the
+explicit preflight commands below are optional but useful when you want a fast
+sanity check before a longer image build:
 
 ```bash
 ./scripts/prep-bundle.sh bundle/sse-installer
@@ -161,6 +165,8 @@ Watch the stack come up:
 ```bash
 kubectl -n aria-config get pvc,pods,svc,endpoints -o wide
 kubectl -n aria-config get pods -w
+kubectl -n aria-config rollout status deployment/raas --timeout=180s
+kubectl -n aria-config rollout status deployment/salt-master --timeout=180s
 ```
 
 Expected steady state:
