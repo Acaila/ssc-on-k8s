@@ -41,13 +41,17 @@ print(uuid.uuid4())
 PY
 }
 
+normalize_uuid() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
 # Broadcom's customer_id is the namespace boundary inside the RaaS database.
 # Generate it once when the operator has not supplied one, and then persist it
 # so separate deployments do not all stamp the same identifier into their DB.
 if [ -n "${RAAS_CUSTOMER_ID:-}" ]; then
-  customer_id="${RAAS_CUSTOMER_ID}"
+  customer_id="$(normalize_uuid "${RAAS_CUSTOMER_ID}")"
 elif [ -s "${RAAS_PERSIST_CUSTOMER_ID_PATH}" ]; then
-  customer_id="$(tr -d '\r\n' < "${RAAS_PERSIST_CUSTOMER_ID_PATH}")"
+  customer_id="$(normalize_uuid "$(tr -d '\r\n' < "${RAAS_PERSIST_CUSTOMER_ID_PATH}")")"
 else
   customer_id="$(generate_uuid)"
   echo "[entrypoint] Generated RaaS customer_id ${customer_id}"

@@ -137,7 +137,7 @@ generate them on first start:
 
 ```bash
 kubectl -n aria-config create secret generic ssc-bootstrap \
-  --from-literal=customer_id="$(uuidgen)" \
+  --from-literal=customer_id="$(uuidgen | tr '[:upper:]' '[:lower:]')" \
   --from-literal=cluster_id="$(uuidgen)"
 ```
 

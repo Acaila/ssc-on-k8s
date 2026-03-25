@@ -96,7 +96,7 @@ entrypoints generate them on first start, create the optional bootstrap secret:
 
 ```bash
 kubectl -n aria-config create secret generic ssc-bootstrap \
-  --from-literal=customer_id="$(uuidgen)" \
+  --from-literal=customer_id="$(uuidgen | tr '[:upper:]' '[:lower:]')" \
   --from-literal=cluster_id="$(uuidgen)"
 ```
 
