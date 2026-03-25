@@ -1,13 +1,22 @@
-# Entry-point kustomization kept intentionally narrow.
-# The repo now has a validated Minikube deployment workflow, but the manifests
-# are not yet maintained as a single generic end-to-end kustomize bundle across
-# all target platforms.
+# Entry-point kustomization for the validated local SSC stack.
+# Keep the per-service manifests as the source of truth, and use this file as
+# the single kubectl apply target so we do not duplicate resources into a
+# hand-maintained bundle.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: aria-config
 resources:
   - namespace.yaml
-
-# The remaining manifests are intentionally left out of the default kustomize
-# bundle until the broader Kubernetes packaging story is made consistent across
-# the supported platform guides.
+  - storage/pvc-postgres.yaml
+  - storage/pvc-redis.yaml
+  - storage/pvc-raas.yaml
+  - storage/pvc-salt-master.yaml
+  - storage/pvc-salt-minion-artifacts.yaml
+  - postgres/service.yaml
+  - postgres/deployment.yaml
+  - redis/service.yaml
+  - redis/deployment.yaml
+  - raas/service.yaml
+  - raas/deployment.yaml
+  - salt-master/service.yaml
+  - salt-master/deployment.yaml

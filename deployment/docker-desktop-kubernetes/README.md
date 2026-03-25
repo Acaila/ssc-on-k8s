@@ -105,27 +105,14 @@ If you skip that secret:
 - RaaS generates and persists a deployment-unique `customer_id`
 - salt-master generates and persists a deployment-unique `cluster_id`
 
-Create the PVCs:
+Apply the consolidated kustomize entry point:
 
 ```bash
-kubectl apply -f storage/pvc-postgres.yaml
-kubectl apply -f storage/pvc-redis.yaml
-kubectl apply -f storage/pvc-raas.yaml
-kubectl apply -f storage/pvc-salt-master.yaml
-kubectl apply -f storage/pvc-salt-minion-artifacts.yaml
+kubectl apply -k .
 ```
 
 The validated manifests do not hardcode a storage class. They follow the
 cluster default storage class provided by Docker Desktop Kubernetes.
-
-Deploy the services:
-
-```bash
-kubectl apply -f postgres/
-kubectl apply -f redis/
-kubectl apply -f raas/
-kubectl apply -f salt-master/
-```
 
 ## 2. Watch First Boot
 

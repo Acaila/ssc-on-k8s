@@ -63,7 +63,7 @@ The repository is organized around a staged workflow:
 - `deployment/` contains platform-target runtime and deployment guides
 - `scripts/` contains the bundle staging, preflight, and image build helpers
 - `lab/compose/` contains the local Docker Compose files used to validate the containerized stack on a desktop or laptop
-- Kubernetes manifests in the repo include a validated Minikube workflow plus ongoing design work for broader target platforms
+- Kubernetes manifests in the repo include a consolidated `kubectl apply -k .` entry point for the validated local stack, plus the underlying per-service manifests used to maintain it
 
 ## Known Gaps
 
