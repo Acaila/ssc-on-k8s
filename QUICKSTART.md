@@ -14,6 +14,7 @@ For more detailed platform notes, see:
 
 - [images/README.md](images/README.md)
 - [deployment/docker-desktop-kubernetes/README.md](deployment/docker-desktop-kubernetes/README.md)
+- [deployment/salt-admin-usage.md](deployment/salt-admin-usage.md)
 
 ## 1. Check Out The Repo
 
@@ -213,3 +214,7 @@ Healthy steady-state log patterns include:
 - `minions.save_minion_key_state`
 - `masterfs.save_masterfs`
 - `ret.save_event`
+
+If you want to use the Salt CLI from the running master after deployment, see:
+
+- [deployment/salt-admin-usage.md](deployment/salt-admin-usage.md)

@@ -39,6 +39,7 @@ That document already covers:
 - compose-based runtime bring-up
 - RaaS port override
 - first-login behavior for accepting the pending Salt master key
+- day-2 Salt CLI usage through `docker exec`
 - registry retag/push flow
 
 This file exists mainly to give the Docker-host runtime a stable place in the

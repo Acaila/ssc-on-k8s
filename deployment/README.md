@@ -13,6 +13,7 @@ workflow that matches their environment.
 - [Docker Host Runtime](dockerhost/README.md)
 - [TKG](tkg/README.md)
 - [Podman](podman/README.md)
+- [Salt Master CLI Usage](salt-admin-usage.md)
 
 ## Scope
 

@@ -43,6 +43,9 @@ browser login, start with:
 The current source of truth for platform-specific runtime and deployment notes is:
 
 - [deployment/README.md](deployment/README.md)
+- [deployment/salt-admin-usage.md](deployment/salt-admin-usage.md) for
+  traditional Salt administrators who want to use the master CLI inside the
+  containerized runtime
 
 That guide covers:
 

@@ -200,3 +200,5 @@ Expected steady-state result:
   instead of hardcoding a local-lab-specific class name.
 - The same RaaS VIP localization gap still exists here as in the other local
   runtime paths. It does not block the validated RaaS/salt-master workflow.
+- For normal day-2 Salt CLI usage from the running master container, see
+  [deployment/salt-admin-usage.md](../salt-admin-usage.md).

@@ -270,7 +270,12 @@ The scale-out/shared-master implications of that split are noted in:
 - [storage/pvc-salt-minion-artifacts.yaml](../../storage/pvc-salt-minion-artifacts.yaml)
 - [salt-master/deployment.yaml](../../salt-master/deployment.yaml)
 
-## 10. Useful Commands
+## 10. Day-2 Salt CLI Usage
+
+For normal `salt`, `salt-run`, and `salt-call --local` usage from the running
+master container, see [deployment/salt-admin-usage.md](../salt-admin-usage.md).
+
+## 11. Useful Commands
 
 Stack status:
 
