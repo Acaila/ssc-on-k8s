@@ -108,7 +108,7 @@ entrypoints generate them on first start, apply the optional bootstrap secret:
 
 ```bash
 kubectl -n aria-config create secret generic ssc-bootstrap \
-  --from-literal=customer_id="$(uuidgen)" \
+  --from-literal=customer_id="$(uuidgen | tr '[:upper:]' '[:lower:]')" \
   --from-literal=cluster_id="$(uuidgen)"
 ```
 
@@ -117,23 +117,10 @@ If you skip that secret:
 - RaaS generates and persists a deployment-unique `customer_id`
 - salt-master generates and persists a deployment-unique `cluster_id`
 
-Create the PVCs:
+Then apply the consolidated kustomize entry point:
 
 ```bash
-kubectl apply -f storage/pvc-postgres.yaml
-kubectl apply -f storage/pvc-redis.yaml
-kubectl apply -f storage/pvc-raas.yaml
-kubectl apply -f storage/pvc-salt-master.yaml
-kubectl apply -f storage/pvc-salt-minion-artifacts.yaml
-```
-
-Deploy the services:
-
-```bash
-kubectl apply -f postgres/
-kubectl apply -f redis/
-kubectl apply -f raas/
-kubectl apply -f salt-master/
+kubectl apply -k .
 ```
 
 ## 4. Watch First Boot
