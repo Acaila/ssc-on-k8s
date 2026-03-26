@@ -113,6 +113,7 @@ services:
       EAPI_CLUSTER_ID: ${EAPI_CLUSTER_ID:-}
       EAPI_FAILOVER_MASTER: "False"
       EAPI_SSL_VALIDATION: "False"
+      EXTRA_MASTER_CONFIG_DIR: /etc/salt/extra-master.d
     ports:
       - "4505:4505"
       - "4506:4506"
@@ -123,6 +124,7 @@ services:
       - ../config/salt/pillar:/etc/salt/pillar:Z
       - ../config/salt/pki/master:/etc/salt/pki/master:Z
       - ../config/salt/master.d:/etc/salt/master.d:Z
+      - ../config/salt/master.d.extra:/etc/salt/extra-master.d:Z
       - ../artifacts/salt:/srv/salt:Z
       - ../logs/salt:/var/log/salt:Z
       - ../tmp/salt/cache:/var/cache/salt:Z

@@ -1,0 +1,31 @@
+# Optional ConfigMap for operator-managed Salt master config fragments.
+# Apply this only when you want to layer extra master.d content into the
+# validated Kubernetes deployment. The deployment references it as optional.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: salt-master-extra-config
+  namespace: aria-config
+data:
+  20-winrepo-ng.conf: |
+    winrepo_remotes_ng:
+      - https://github.com/saltstack/salt-winrepo-ng.git
+
+  30-gitfs.conf: |
+    fileserver_backend:
+      - sseapi
+      - gitfs
+      - roots
+
+    gitfs_provider: pygit2
+    gitfs_remotes:
+      - https://github.com/example-org/salt-states.git:
+        - saltenv:
+          - base:
+            - ref: main
+
+  40-git-pillar.conf: |
+    ext_pillar:
+      - sseapi: {}
+      - git:
+        - main https://github.com/example-org/salt-pillars.git

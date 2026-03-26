@@ -117,6 +117,8 @@ spec:
               value: "False"
             - name: EAPI_SSL_VALIDATION
               value: "False"
+            - name: EXTRA_MASTER_CONFIG_DIR
+              value: /etc/salt/extra-master.d
           ports:
             - containerPort: 4505
             - containerPort: 4506
@@ -137,6 +139,9 @@ spec:
           volumeMounts:
             - name: master-config
               mountPath: /etc/salt/master.d
+            - name: extra-master-config
+              mountPath: /etc/salt/extra-master.d
+              readOnly: true
             # Keep the master's own PKI, including SSE/RaaS auth material,
             # on the master-local PVC so a redeploy can reuse the same master
             # identity and RaaS trust relationship.
@@ -189,6 +194,10 @@ spec:
       volumes:
         - name: master-config
           emptyDir: {}
+        - name: extra-master-config
+          configMap:
+            name: salt-master-extra-config
+            optional: true
         - name: minion-keys
           persistentVolumeClaim:
             claimName: salt-minion-keys-pvc

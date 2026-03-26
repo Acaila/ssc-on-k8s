@@ -11,6 +11,7 @@ EAPI_CLUSTER_ID="${EAPI_CLUSTER_ID:-}"
 EAPI_CLUSTER_ID_FILE="${EAPI_CLUSTER_ID_FILE:-/etc/salt/master.d/.cluster_id}"
 EAPI_FAILOVER_MASTER="${EAPI_FAILOVER_MASTER:-False}"
 EAPI_SSL_VALIDATION="${EAPI_SSL_VALIDATION:-False}"
+EXTRA_MASTER_CONFIG_DIR="${EXTRA_MASTER_CONFIG_DIR:-/etc/salt/extra-master.d}"
 
 # Only ensure the writable parent of the persisted cluster ID exists. The
 # image provides the standard Salt tree, and Kubernetes/Compose mounts replace
@@ -171,5 +172,19 @@ sseapi_local_cache:
 
 sseapi_command_age_limit: 0
 EOF
+
+# Allow operator-managed Salt master fragments to be layered in without
+# rebuilding the image. This is the intended path for settings such as
+# winrepo_ng, gitfs, or git_pillar that are specific to a deployment.
+if [ -d "${EXTRA_MASTER_CONFIG_DIR}" ]; then
+  for fragment in "${EXTRA_MASTER_CONFIG_DIR}"/*; do
+    [ -e "${fragment}" ] || continue
+    case "${fragment}" in
+      *.conf|*.yaml)
+        cp "${fragment}" "/etc/salt/master.d/$(basename "${fragment}")"
+        ;;
+    esac
+  done
+fi
 
 exec /opt/saltstack/salt/salt-master -l info

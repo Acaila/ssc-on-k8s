@@ -45,6 +45,30 @@ For operators with a Linux or vSphere background, the practical rule is:
 - do not duplicate the whole directory tree in Kubernetes init containers just
   because the image also creates it
 
+## Salt Master Day-2 Config
+
+The salt-master image now includes an operator-managed drop-in path at
+`/etc/salt/extra-master.d`.
+
+The entrypoint still renders the Broadcom/SSE integration fragments into
+`/etc/salt/master.d`, but it also copies any `.conf` or `.yaml` files from
+`/etc/salt/extra-master.d` into `master.d` on startup.
+
+This is the intended path for day-2 Salt master changes such as:
+
+- `winrepo_ng`
+- `gitfs`
+- `git_pillar`
+- fileserver backend overrides that add `gitfs` alongside `sseapi` and `roots`
+
+For the local Compose lab, use:
+
+- [lab/config/salt/master.d.extra/README.md](../lab/config/salt/master.d.extra/README.md)
+
+For Kubernetes, create the optional ConfigMap shape documented at:
+
+- [salt-master/extra-config.example.yaml](../salt-master/extra-config.example.yaml)
+
 ## Prerequisites
 
 You need:
