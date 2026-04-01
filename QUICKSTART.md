@@ -215,6 +215,49 @@ Healthy steady-state log patterns include:
 - `masterfs.save_masterfs`
 - `ret.save_event`
 
-If you want to use the Salt CLI from the running master after deployment, see:
+## 10. Prove The Salt Master Is Usable
+
+This stack is not just the RaaS UI. It also gives you a working Salt master
+that you can access from the command line.
+
+Open a shell on the running master:
+
+```bash
+kubectl -n aria-config exec -it deploy/salt-master -- sh
+```
+
+Once inside the container, you can run normal Salt commands such as:
+
+```bash
+salt-run fileserver.envs
+salt-call --local test.version
+```
+
+Expected results from a fresh deployment include:
+
+- `salt-run fileserver.envs` returning `base`
+- `salt-call --local test.version` returning the Salt version from the master
+
+You can also run those commands directly from the workstation without opening
+an interactive shell first:
+
+```bash
+kubectl -n aria-config exec deploy/salt-master -- salt-run fileserver.envs
+kubectl -n aria-config exec deploy/salt-master -- salt-call --local test.version
+```
+
+After you have one or more minions enrolled to this master, typical day-to-day
+Salt commands look like:
+
+```bash
+kubectl -n aria-config exec deploy/salt-master -- salt '*' test.ping
+kubectl -n aria-config exec deploy/salt-master -- salt '*' pillar.items
+```
+
+On a fresh quickstart deployment with no enrolled minions yet, those targeting
+commands may return no matches. That is expected until minions are connected.
+
+For more detail on interactive shell usage, one-off commands, and container
+operating patterns for traditional Salt administrators, see:
 
 - [deployment/salt-admin-usage.md](deployment/salt-admin-usage.md)
