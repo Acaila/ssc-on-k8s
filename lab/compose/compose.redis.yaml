@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  redis:
+    # Redis is also left native-arch; it is a stock dependency rather than a
+    # Broadcom payload.
+    image: docker.io/redis:7-alpine
+    container_name: ssc-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    networks:
+      - ssc-net
+    volumes:
+      # Keep the appendonly dataset on disk so queue state survives restarts.
+      - ../data/redis:/data:Z
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  ssc-net:
+    # Keep the shared lab service-discovery network consistent with the other
+    # split compose files.
+    name: ssc-net

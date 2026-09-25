@@ -1,0 +1,12 @@
+# Namespace for the SSC Kubernetes validation stack.
+# Keep the scope narrow: validate the split services first, then harden and
+# expand the deployment model for broader platform use.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aria-config
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline

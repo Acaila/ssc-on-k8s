@@ -1,0 +1,83 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.4
+
+LABEL org.opencontainers.image.title="SSC RaaS" \
+      org.opencontainers.image.version="8.18.3" \
+      org.opencontainers.image.vendor="Broadcom (VMware)" \
+      org.opencontainers.image.licenses="Proprietary" \
+      org.opencontainers.image.source="internal"
+
+EXPOSE 443
+
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONPATH=/opt/saltstack/raas:/app/raas
+ENV RAAS_STATIC_DIR=/opt/saltstack/raas/static
+
+RUN microdnf -y install \
+      shadow-utils \
+      python3.11 \
+      python3.11-devel \
+      openssl \
+      hostname \
+      which \
+      gzip \
+      tar \
+      procps-ng \
+      findutils \
+      sed \
+    && microdnf clean all
+
+ADD keys/ /tmp/keys/
+ADD rpms/ /tmp/rpms/
+
+RUN set -eux; \
+    find /tmp/keys -type f \( -name '*.pub' -o -name '*.asc' -o -name '*.gpg' \) -exec rpm --import {} \; || true; \
+    rpm -K /tmp/rpms/raas/*.rpm; \
+    rpm -Uvh \
+      /tmp/rpms/deps/libsodium-*.rpm \
+      /tmp/rpms/deps/libtool-ltdl-*.rpm \
+      /tmp/rpms/deps/libxslt-*.rpm \
+      /tmp/rpms/deps/xmlsec1-openssl-*.rpm \
+      /tmp/rpms/deps/xmlsec1-[0-9]*.rpm \
+      /tmp/rpms/raas/*.rpm; \
+    rm -rf /tmp/rpms /tmp/keys; \
+    /usr/sbin/ldconfig || true
+
+RUN mkdir -p \
+      /etc/raas \
+      /etc/raas/pki \
+      /etc/pki/raas/certs \
+      /var/cache/raas \
+      /var/lib/raas \
+      /var/log/raas \
+      /var/run/raas \
+      /bootstrap && \
+    chown -R raas:raas \
+      /etc/raas \
+      /etc/pki/raas \
+      /var/cache/raas \
+      /var/lib/raas \
+      /var/log/raas \
+      /var/run/raas \
+      /opt/saltstack/raas \
+      /bootstrap
+
+COPY images/files/raas.example /bootstrap/raas
+COPY images/files/entrypoint-raas.sh /entrypoint.sh
+RUN chmod 0755 /entrypoint.sh && chown -R raas:raas /bootstrap
+
+RUN printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'exec /opt/saltstack/raas/bin/python3 -m alembic "$@"' \
+  > /usr/local/bin/alembic \
+  && chmod 0755 /usr/local/bin/alembic
+
+USER raas
+
+VOLUME ["/etc/raas", "/var/log/raas", "/var/lib/raas", "/var/cache/raas"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=10 \
+  CMD /opt/saltstack/raas/bin/python3 -c "import os,socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',int(os.environ.get('RAAS_LISTEN_PORT','443')))); s.close()"
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/opt/saltstack/raas/scripts/raas", "-c", "/etc/raas"]

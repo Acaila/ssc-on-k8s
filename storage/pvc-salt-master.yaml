@@ -1,0 +1,11 @@
+# Salt master PVC for master-specific state.
+# Reserve this claim for master-local state that should follow a given master
+# instance, not for shared minion trust material.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: salt-master-pvc
+  namespace: aria-config
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources: { requests: { storage: 5Gi } }

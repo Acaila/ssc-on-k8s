@@ -1,0 +1,22 @@
+# Entry-point kustomization for the validated local SSC stack.
+# Keep the per-service manifests as the source of truth, and use this file as
+# the single kubectl apply target so we do not duplicate resources into a
+# hand-maintained bundle.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: aria-config
+resources:
+  - namespace.yaml
+  - storage/pvc-postgres.yaml
+  - storage/pvc-redis.yaml
+  - storage/pvc-raas.yaml
+  - storage/pvc-salt-master.yaml
+  - storage/pvc-salt-minion-artifacts.yaml
+  - postgres/service.yaml
+  - postgres/deployment.yaml
+  - redis/service.yaml
+  - redis/deployment.yaml
+  - raas/service.yaml
+  - raas/deployment.yaml
+  - salt-master/service.yaml
+  - salt-master/deployment.yaml

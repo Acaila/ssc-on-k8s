@@ -1,0 +1,144 @@
+version: "3.9"
+
+services:
+  postgres:
+    # Stock infra dependencies stay native-arch; only Broadcom-provided images
+    # need explicit amd64 handling on non-x86 desktop hosts.
+    image: docker.io/postgres:15-alpine
+    container_name: ssc-postgres
+    environment:
+      POSTGRES_DB: raas
+      POSTGRES_USER: raas
+      POSTGRES_PASSWORD: raaspass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    networks:
+      - ssc-net
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raas -d raas"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  redis:
+    # Redis remains native-arch for simplicity and startup speed in the lab.
+    image: docker.io/redis:7-alpine
+    container_name: ssc-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    networks:
+      - ssc-net
+    volumes:
+      - ../data/redis:/data:Z
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  raas:
+    # Broadcom supplies x86_64 RPMs, so the lab defaults to amd64 for builds
+    # and runtime on desktop hosts that are not already x86_64.
+    platform: ${SSC_IMAGE_PLATFORM:-linux/amd64}
+    build:
+      context: ../..
+      dockerfile: images/Dockerfile.raas
+    image: localhost/ssc-raas:8.18.3
+    container_name: ssc-raas
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: ssc-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: raas
+      POSTGRES_USER: raas
+      POSTGRES_PASSWORD: raaspass
+      REDIS_HOST: ssc-redis
+      REDIS_PORT: "6379"
+      RAAS_PORT: "443"
+    ports:
+      # Preserve the appliance-style in-container listener while allowing the
+      # desktop host-side port to be overridden for local lab use.
+      - "${RAAS_HOST_PORT:-443}:443"
+    networks:
+      - ssc-net
+    volumes:
+      # Keep config, certs, logs, and runtime data on separate host paths so it
+      # is easy to inspect or replace any one layer during troubleshooting.
+      - ../config/raas:/etc/raas:Z,U
+      - ../config/raas/certs:/etc/pki/raas/certs:Z,U
+      - ../logs/raas:/var/log/raas:Z,U
+      - ../data/raas:/var/lib/raas:Z,U
+      - ../tmp/raas:/var/cache/raas:Z,U
+    healthcheck:
+      # Probe the TLS listener directly instead of a UI route so readiness stays
+      # stable even if optional UI components are absent.
+      test: ["CMD", "/opt/saltstack/raas/bin/python3", "-c", "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1',443)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  salt-master:
+    # Match the RaaS image platform choice so the full stack behaves the same
+    # whether started from the split files or the combined lab compose.
+    platform: ${SSC_IMAGE_PLATFORM:-linux/amd64}
+    build:
+      context: ../..
+      dockerfile: images/Dockerfile.salt-master
+    image: localhost/ssc-salt-master:3006-lts
+    container_name: ssc-salt-master
+    depends_on:
+      raas:
+        condition: service_healthy
+    environment:
+      # Use the same HTTPS endpoint and disabled cert validation that the lab
+      # uses while self-signed RaaS certs are in place.
+      SALT_MASTER_ID: saltmaster1
+      RAAS_HOST: ssc-raas
+      RAAS_PORT: "443"
+      RAAS_SCHEME: https
+      EAPI_CLUSTER_ID: ${EAPI_CLUSTER_ID:-}
+      EAPI_FAILOVER_MASTER: "False"
+      EAPI_SSL_VALIDATION: "False"
+      EXTRA_MASTER_CONFIG_DIR: /etc/salt/extra-master.d
+    ports:
+      - "4505:4505"
+      - "4506:4506"
+    networks:
+      - ssc-net
+    volumes:
+      - ../config/salt/master:/etc/salt/master:Z
+      - ../config/salt/pillar:/etc/salt/pillar:Z
+      - ../config/salt/pki/master:/etc/salt/pki/master:Z
+      - ../config/salt/master.d:/etc/salt/master.d:Z
+      - ../config/salt/master.d.extra:/etc/salt/extra-master.d:Z
+      - ../artifacts/salt:/srv/salt:Z
+      - ../logs/salt:/var/log/salt:Z
+      - ../tmp/salt/cache:/var/cache/salt:Z
+      - ../tmp/salt/run:/var/run/salt:Z
+    healthcheck:
+      test: ["CMD", "/opt/saltstack/salt/salt-master", "--version"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+networks:
+  ssc-net:
+    # Use a stable network name so either the combined compose file or the
+    # split compose files can create and reuse the same local lab network.
+    name: ssc-net

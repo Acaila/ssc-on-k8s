@@ -1,0 +1,16 @@
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: web
+spec:
+  virtualhost:
+    fqdn: ${ssc_hostname}
+    tls:
+      secretName: ssc-web-tls
+  routes:
+    - conditions:
+        - prefix: /
+      services:
+        - name: ${contour_service}
+          port: 443
+          protocol: tls

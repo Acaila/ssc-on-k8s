@@ -1,0 +1,218 @@
+# Salt master deployment for Kubernetes validation.
+# The storage split in this manifest is intentional:
+# - master-config is regenerated on each start by the entrypoint
+# - master-persist holds master-specific identity, SSE/RaaS auth material, and
+#   generated values such as cluster identity
+# - minion-keys isolates accepted/pending/rejected minion trust state from the
+#   master's own identity so the trust database can evolve independently
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: salt-master
+  namespace: aria-config
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: salt-master } }
+  template:
+    metadata:
+      labels: { app: salt-master }
+    spec:
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
+      initContainers:
+        - name: salt-permissions
+          # Reuse the validated salt-master image for init work so the
+          # deployment does not depend on pulling an extra utility image at
+          # runtime.
+          image: localhost/ssc-salt-master:3006-lts
+          imagePullPolicy: Never
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              # The image already ships the top-level Salt paths. In
+              # Kubernetes those image-owned directories are hidden by mounted
+              # volumes, so only create the nested paths that must exist
+              # inside those mounts before the non-root entrypoint starts.
+              mkdir -p \
+                /persist-master/master-pki/master \
+                /persist-master/master-state
+              mkdir -p \
+                /persist/minions \
+                /persist/minions_autosign \
+                /persist/minions_denied \
+                /persist/minions_pre \
+                /persist/minions_rejected
+              chown -R 999:999 \
+                /etc/salt/master.d \
+                /opt/saltstack/salt/.local \
+                /srv/salt \
+                /var/cache/salt \
+                /var/log/salt \
+                /var/run/salt \
+                /tmp
+              chown -R 999:999 \
+                /persist-master/master-pki \
+                /persist-master/master-state
+              chmod 0755 /persist-master/master-pki
+              chmod 0755 /persist-master/master-pki/master
+              # The dedicated minion-key claim is only for trust-state
+              # directories. Leave it writable so future master replacements
+              # can reuse the same accepted/pending/rejected key database.
+              chmod 0777 \
+                /persist/minions \
+                /persist/minions_autosign \
+                /persist/minions_denied \
+                /persist/minions_pre \
+                /persist/minions_rejected
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: master-config
+              mountPath: /etc/salt/master.d
+            - name: master-persist
+              mountPath: /persist-master
+            - name: relenv-local
+              mountPath: /opt/saltstack/salt/.local
+            - name: minion-keys
+              mountPath: /persist
+            - name: srv-salt
+              mountPath: /srv/salt
+            - name: cache
+              mountPath: /var/cache/salt
+            - name: logs
+              mountPath: /var/log/salt
+            - name: run
+              mountPath: /var/run/salt
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: salt-master
+          image: localhost/ssc-salt-master:3006-lts
+          imagePullPolicy: Never
+          env:
+            - name: SALT_MASTER_ID
+              value: saltmaster1
+            - name: RAAS_HOST
+              value: raas
+            - name: RAAS_PORT
+              value: "443"
+            - name: RAAS_SCHEME
+              value: https
+            - name: EAPI_CLUSTER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ssc-bootstrap
+                  key: cluster_id
+                  optional: true
+            - name: EAPI_CLUSTER_ID_FILE
+              value: /var/lib/ssc-salt-master/cluster_id
+            - name: EAPI_FAILOVER_MASTER
+              value: "False"
+            - name: EAPI_SSL_VALIDATION
+              value: "False"
+            - name: EXTRA_MASTER_CONFIG_DIR
+              value: /etc/salt/extra-master.d
+          ports:
+            - containerPort: 4505
+            - containerPort: 4506
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+          volumeMounts:
+            - name: master-config
+              mountPath: /etc/salt/master.d
+            - name: extra-master-config
+              mountPath: /etc/salt/extra-master.d
+              readOnly: true
+            # Keep the master's own PKI, including SSE/RaaS auth material,
+            # on the master-local PVC so a redeploy can reuse the same master
+            # identity and RaaS trust relationship.
+            - name: master-persist
+              mountPath: /etc/salt/pki
+              subPath: master-pki
+            # Keep generated master-local values on the same PVC as the master
+            # PKI so both move together during a replacement.
+            - name: master-persist
+              mountPath: /var/lib/ssc-salt-master
+              subPath: master-state
+            # Bind the minion trust-state directories individually so they can
+            # live on their own claim without forcing the whole PKI tree to be
+            # shared with other master-specific material.
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions
+              subPath: minions
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_autosign
+              subPath: minions_autosign
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_denied
+              subPath: minions_denied
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_pre
+              subPath: minions_pre
+            - name: minion-keys
+              mountPath: /etc/salt/pki/master/minions_rejected
+              subPath: minions_rejected
+            - name: relenv-local
+              mountPath: /opt/saltstack/salt/.local
+            - name: srv-salt
+              mountPath: /srv/salt
+            - name: cache
+              mountPath: /var/cache/salt
+            - name: logs
+              mountPath: /var/log/salt
+            - name: run
+              mountPath: /var/run/salt
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            tcpSocket: { port: 4506 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 4505 }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: master-config
+          emptyDir: {}
+        - name: extra-master-config
+          configMap:
+            name: salt-master-extra-config
+            optional: true
+        - name: minion-keys
+          persistentVolumeClaim:
+            claimName: salt-minion-keys-pvc
+        - name: master-persist
+          persistentVolumeClaim:
+            claimName: salt-master-pvc
+        - name: relenv-local
+          emptyDir: {}
+        - name: srv-salt
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

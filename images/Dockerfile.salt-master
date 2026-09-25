@@ -1,0 +1,39 @@
+FROM rockylinux:9
+
+RUN set -eux; \
+    dnf -y install dnf-plugins-core ca-certificates; \
+    curl -fsSL \
+      https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo \
+      -o /etc/yum.repos.d/salt.repo; \
+    dnf clean expire-cache; \
+    LATEST_3006="$(dnf repoquery --showduplicates --qf '%{version}' salt-master | grep -E '^3006\.' | sort -V | tail -n1)"; \
+    test -n "${LATEST_3006}"; \
+    echo "Installing Salt LTS version: ${LATEST_3006}"; \
+    dnf -y install "salt-master-${LATEST_3006}" "salt-minion-${LATEST_3006}"; \
+    dnf clean all; \
+    rm -rf /var/cache/dnf
+
+RUN mkdir -p \
+    /etc/salt \
+    /etc/salt/extra-master.d \
+    /etc/salt/master.d \
+    /etc/salt/pki/master \
+    /srv/salt \
+    /var/log/salt \
+    /var/cache/salt \
+    /var/run/salt \
+    /tmp/whl
+
+COPY bundle/whl/SSEAPE-8.18.3.6-py3-none-any.whl /tmp/whl/SSEAPE-8.18.3.6-py3-none-any.whl
+COPY lab/compose/files/entrypoint.salt-master.sh /usr/local/bin/entrypoint.sh
+
+RUN set -eux; \
+    /opt/saltstack/salt/salt-pip install \
+      /tmp/whl/SSEAPE-8.18.3.6-py3-none-any.whl \
+      pygit2
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 4505 4506
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

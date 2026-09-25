@@ -1,0 +1,145 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../../postgres
+  - ../../../../redis
+  - ../../../../raas
+  - ../../../../salt-master
+  - ../../../../storage
+  - httpproxy.yaml
+${bridge_resource}namespace: ${namespace}
+namePrefix: ssc-
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: ssc
+    includeSelectors: false
+    includeTemplates: true
+images:
+${image_entries}patches:
+  - target:
+      kind: PersistentVolumeClaim
+    patch: |-
+      - op: add
+        path: /spec/storageClassName
+        value: ${storage_class}
+  - target:
+      kind: Deployment
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: ignored
+      spec:
+        strategy:
+          type: Recreate
+        template:
+          spec:
+            automountServiceAccountToken: false
+            imagePullSecrets:
+              - name: ssc-registry
+  - target:
+      kind: Deployment
+      name: raas
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: raas
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: raas-storage-root
+                imagePullPolicy: IfNotPresent
+            containers:
+              - name: raas
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: RAAS_LISTEN_PORT
+                    value: "8443"
+                  - name: RAAS_DB_HOST
+                    value: ssc-postgres
+                  - name: RAAS_REDIS_HOST
+                    value: ssc-redis
+                  - name: RAAS_TLS_CN
+                    value: ${ssc_hostname}
+                ports:
+                  - $patch: replace
+                  - containerPort: 8443
+                resources:
+                  requests:
+                    memory: 4Gi
+                  limits:
+                    memory: 4Gi
+                readinessProbe:
+                  tcpSocket: null
+                  httpGet:
+                    scheme: HTTPS
+                    path: /
+                    port: 8443
+                  timeoutSeconds: 5
+                livenessProbe:
+                  tcpSocket: null
+                  httpGet:
+                    scheme: HTTPS
+                    path: /
+                    port: 8443
+                  timeoutSeconds: 5
+                startupProbe:
+                  httpGet:
+                    scheme: HTTPS
+                    path: /
+                    port: 8443
+                  timeoutSeconds: 5
+                  failureThreshold: 90
+                  periodSeconds: 10
+  - target:
+      kind: Deployment
+      name: salt-master
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: salt-master
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: salt-permissions
+                imagePullPolicy: IfNotPresent
+            containers:
+              - name: salt-master
+                imagePullPolicy: IfNotPresent
+                env:
+                  - name: RAAS_HOST
+                    value: ssc-raas
+                  - name: SALT_MASTER_ID
+                    value: ${master_id}
+                startupProbe:
+                  tcpSocket:
+                    port: 4506
+                  failureThreshold: 90
+                  periodSeconds: 10
+  - target:
+      kind: Service
+      name: raas
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: ClusterIP
+      - op: replace
+        path: /spec/ports/0/targetPort
+        value: 8443
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/selector/matchLabels/app.kubernetes.io~1part-of
+        value: ssc
+  - target:
+      kind: Service
+      name: (postgres|redis|raas|salt-master|raas-ingress)
+    patch: |-
+      - op: add
+        path: /spec/selector/app.kubernetes.io~1part-of
+        value: ssc

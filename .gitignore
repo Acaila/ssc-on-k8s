@@ -1,0 +1,110 @@
+# --- OS/editor noise ---
+.DS_Store
+
+# --- Artifact payloads (local only) ---
+artifacts-image/deployment.d/*
+artifacts-image/cloud.deploy.d/*
+artifacts-image/cloud.profiles.d/*
+
+# --- Salt / SSC install payloads ---
+rpms/*
+keys/*
+
+# allow placeholder files so directories exist in repo
+!rpms/.gitkeep
+!keys/.gitkeep
+!keys/README.md
+!rpms/README.md
+!rpms/raas/
+!rpms/raas/README.md
+!rpms/deps/
+!rpms/deps/README.md
+
+# --- Secrets / certificates ---
+*.crt
+*.key
+*.pem
+
+# --- RPM payloads ---
+*.rpm
+
+# Airgap payload bundles
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# --- Lab runtime data ---
+lab/data/
+lab/logs/
+lab/tmp/
+
+# --- Lab RaaS secrets / generated files ---
+lab/config/raas/pki/
+lab/config/raas/raas.secconf
+
+# --- Lab Salt generated PKI ---
+lab/config/salt/pki/master/master.pem
+lab/config/salt/pki/master/master.pub
+lab/config/salt/pki/master/minions/
+lab/config/salt/pki/master/minions_pre/
+lab/config/salt/pki/master/minions_denied/
+lab/config/salt/pki/master/minions_rejected/
+lab/config/salt/pki/master/minions_autosign/
+
+# --- Keep tracked lab structure/config/docs ---
+!lab/
+!lab/artifacts/
+!lab/artifacts/salt/
+!lab/compose/
+!lab/compose/*.yaml
+!lab/compose/*.sh
+!lab/compose/files/
+!lab/compose/files/*.sh
+!lab/config/
+!lab/config/raas/
+!lab/config/raas/raas
+!lab/config/raas/certs/
+!lab/config/raas/certs/README.md
+!lab/config/salt/
+!lab/config/salt/master
+!lab/config/salt/master.d/
+!lab/config/salt/pillar/
+
+# --- New staged bundle locations ---
+bundle/sse-installer/
+bundle/rpms/*
+bundle/whl/*
+!bundle/README.md
+!bundle/rpms/
+!bundle/rpms/raas/
+!bundle/rpms/deps/
+!bundle/whl/
+!bundle/whl/README.md
+
+# --- Generated bundle outputs ---
+bundle/whl/*
+!bundle/whl/README.md
+
+# --- Generated lab runtime config ---
+lab/config/salt/master.d/eAPIMasterPaths.conf
+lab/config/salt/pki/**
+!lab/config/salt/pki/
+
+# Per-operator Supervisor configuration and generated overlays.
+# Explicitly add reviewed non-secret overlays only to YOUR deployment repository.
+.supervisor/
+deployment/environments/
+
+# Python helper bytecode
+__pycache__/
+*.pyc
+
+# Workstation credentials, sessions and Kubernetes access files
+.env
+.env.*
+!.env.example
+*.kubeconfig
+.kube/
+*.p12
+*.pfx

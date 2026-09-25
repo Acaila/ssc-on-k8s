@@ -1,0 +1,23 @@
+# Optional routable LoadBalancer bridge when Envoy cannot reach workload pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: raas-ingress
+spec:
+  type: LoadBalancer
+  selector:
+    app: raas
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: raas-contour
+spec:
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443

@@ -1,0 +1,18 @@
+{
+  "environment": "my-supervisor",
+  "namespace": "my-ssc-namespace",
+  "storage_class": "my-supervisor-storage-policy",
+  "ssc_hostname": "ssc.example.com",
+  "salt_hostname": "salt.example.com",
+  "master_id": "ssc-master",
+  "images": {
+    "raas": "registry.example.com/ssc/raas:8.18.3-release-1",
+    "master": "registry.example.com/ssc/salt-master:3006-lts-release-1",
+    "postgres": "registry.example.com/ssc/postgres:15-alpine",
+    "redis": "registry.example.com/ssc/redis:7-alpine"
+  },
+  "contour_mode": "direct",
+  "tls": {
+    "mode": "existing"
+  }
+}
